@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 import mobi
 import shutil
 import contextlib
+from gtts import gTTS
+import os
 
 def setup_nltk():
     """Setup NLTK with SSL workaround for downloads."""
@@ -72,28 +74,31 @@ def initialize_tts_engine():
         print(f"Error: Could not initialize speech engine: {e}")
         sys.exit(1)
 
-def text_to_speech(sentences: List[str]) -> None:
-    """Convert sentences to speech using pyttsx3."""
-    engine = initialize_tts_engine()
-    for sentence in sentences:
-        try:
-            engine.say(sentence)
-            engine.runAndWait()
-        except Exception as e:
-            print(f"Error processing sentence: {e}")
-            continue
+def text_to_speech(sentences: List[str], output_file: str = "output.mp3") -> None:
+    """Convert sentences to speech and save as MP3."""
+    # Join sentences with spaces to create natural pauses
+    full_text = ' '.join(sentences)
+    
+    try:
+        tts = gTTS(text=full_text, lang='en')
+        tts.save(output_file)
+        print(f"Audio saved to {output_file}")
+    except Exception as e:
+        print(f"Error creating audio file: {e}")
 
-def main(filepath: str) -> None:
+def main(filepath: str, output_file: str = "output.mp3") -> None:
     """Main function to process text file and convert to speech."""
     try:
         setup_nltk()
         text = load_text(Path(filepath))
         sentences = split_into_sentences(text)
-        text_to_speech(sentences)
+        text_to_speech(sentences, output_file)
     except KeyboardInterrupt:
         print("\nProcess interrupted by user")
+        if os.path.exists(output_file):
+            os.remove(output_file)
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main("artofwar.mobi")
+    main("test_text.txt")

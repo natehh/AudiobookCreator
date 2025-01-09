@@ -7,3 +7,4 @@ pyobjc-framework-CoreText
 EbookLib
 beautifulsoup4
 mobi
+gTTS
