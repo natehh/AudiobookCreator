@@ -3,8 +3,13 @@ import ssl
 import sys
 from pathlib import Path
 from typing import List
-
 import nltk
+import ebooklib
+from ebooklib import epub
+from bs4 import BeautifulSoup
+import mobi
+import shutil
+import contextlib
 
 def setup_nltk():
     """Setup NLTK with SSL workaround for downloads."""
@@ -19,7 +24,25 @@ def setup_nltk():
 
 def load_text(filepath: Path) -> str:
     """Read text content from file."""
-    return filepath.read_text(encoding='utf-8')
+    suffix = filepath.suffix.lower()
+    
+    if suffix == '.txt':
+        return filepath.read_text(encoding='utf-8')
+    elif suffix == '.epub':
+        book = epub.read_epub(str(filepath))
+        text = ''
+        for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
+            soup = BeautifulSoup(item.content, 'html.parser')
+            text += soup.get_text() + '\n'
+        return text
+    elif suffix == '.mobi':
+        tempdir, mobipath = mobi.extract(str(filepath))
+        try:
+            return load_text(Path(mobipath))
+        finally:
+            shutil.rmtree(tempdir)
+    else:
+        raise ValueError(f"Unsupported file format: {suffix}")
 
 def split_into_sentences(text: str) -> List[str]:
     """Split text into sentences using NLTK."""
@@ -67,8 +90,10 @@ def main(filepath: str) -> None:
         text = load_text(Path(filepath))
         sentences = split_into_sentences(text)
         text_to_speech(sentences)
+    except KeyboardInterrupt:
+        print("\nProcess interrupted by user")
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main("test_text.txt")
+    main("artofwar.mobi")

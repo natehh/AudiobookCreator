@@ -4,3 +4,6 @@ pyobjc-core
 pyobjc-framework-Cocoa
 pyobjc-framework-ApplicationServices
 pyobjc-framework-CoreText
+EbookLib
+beautifulsoup4
+mobi
