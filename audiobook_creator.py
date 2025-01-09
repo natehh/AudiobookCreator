@@ -1,7 +1,6 @@
 import platform
 import ssl
 import sys
-import subprocess
 from pathlib import Path
 from typing import List
 
@@ -26,35 +25,32 @@ def split_into_sentences(text: str) -> List[str]:
     """Split text into sentences using NLTK."""
     return nltk.sent_tokenize(text)
 
-class MacTTS:
-    """Text-to-speech engine for macOS using built-in 'say' command."""
-    def say(self, text):
-        subprocess.run(['say', text])
-    
-    def runAndWait(self):
-        pass  # 'say' command is blocking, no need to wait
-
-class LinuxTTS:
-    """Text-to-speech engine for Linux and other platforms using pyttsx3."""
-    def __init__(self):
-        import pyttsx3
-        self.engine = pyttsx3.init()
-    
-    def say(self, text):
-        self.engine.say(text)
-    
-    def runAndWait(self):
-        self.engine.runAndWait()
-
 def initialize_tts_engine():
-    """Initialize platform-specific text-to-speech engine."""
-    if platform.system() == 'Darwin':
-        return MacTTS()
-    else:
-        return LinuxTTS()
+    """Initialize text-to-speech engine with platform-specific settings."""
+    if platform.system() == 'Darwin':  # macOS
+        try:
+            # Import required packages for macOS
+            import objc
+            import AppKit
+            import Foundation
+        except ImportError:
+            print("Error: Missing required macOS packages.")
+            print("Please install all required packages with:")
+            print("pip install pyobjc-core pyobjc-framework-Cocoa pyobjc-framework-ApplicationServices pyobjc-framework-CoreText")
+            sys.exit(1)
+
+    try:
+        import pyttsx3
+        engine = pyttsx3.init()
+        engine.say("Testing speech engine")
+        engine.runAndWait()
+        return engine
+    except Exception as e:
+        print(f"Error: Could not initialize speech engine: {e}")
+        sys.exit(1)
 
 def text_to_speech(sentences: List[str]) -> None:
-    """Convert sentences to speech using platform-specific TTS."""
+    """Convert sentences to speech using pyttsx3."""
     engine = initialize_tts_engine()
     for sentence in sentences:
         try:
