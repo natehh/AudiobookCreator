@@ -7,9 +7,10 @@ from ebooklib import epub
 from bs4 import BeautifulSoup
 import mobi
 import shutil
-from gtts import gTTS
 import os
 import re
+import pyttsx3
+import threading
 
 def setup_nltk():
     """Setup NLTK with SSL workaround for downloads."""
@@ -86,41 +87,46 @@ def get_chapters(filepath: Path) -> List[tuple[str, str]]:
         text = filepath.read_text(encoding='utf-8')
         return [("Chapter 1", text)]
 
-def split_into_sentences(text: str) -> List[str]:
-    """Split text into sentences using NLTK."""
-    return nltk.sent_tokenize(text)
-
 def get_book_title(filepath: Path) -> str:
    """Extract book title from ebook, fallback to filename."""
    suffix = filepath.suffix.lower()
    
    if suffix == '.epub':
        book = epub.read_epub(str(filepath))
-       return book.get_metadata('DC', 'title')[0][0] or filepath.stem
+       return book.get_metadata('DC', 'title')[0][0].replace(" ", "_") or filepath.stem.replace(" ", "_")
    elif suffix == '.mobi':
        tempdir, mobipath = mobi.extract(str(filepath))
        try:
-           return get_book_title(Path(mobipath))
+           return get_book_title(Path(mobipath)).replace(" ", "_")
        finally:
            shutil.rmtree(tempdir)
    else:
-       return filepath.stem
+       return filepath.stem.replace(" ", "_")
+
 
 def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir: str = "output") -> None:
     """Convert chapters to speech files in book-specific directory."""
     book_dir = os.path.join(output_dir, re.sub(r'[<>:"/\\|?*]', '_', book_title))
     os.makedirs(book_dir, exist_ok=True)
     
-    current_file = None  # Track current file being processed
+    # Initialize the TTS engine
+    engine = pyttsx3.init()
+    engine.say(".")
+    
+    current_file = None
     try:
         for i, (title, content) in enumerate(chapters, 1):
             safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
-            current_file = os.path.join(book_dir, f"{i:02d}_{safe_title}.mp3")
+            current_file = os.path.join(book_dir, f"{i:02d}_{safe_title}.wav")
             
-            tts = gTTS(text=content, lang='en')
-            tts.save(current_file)
+            # Save the speech to an audio file
+            engine.save_to_file(content, current_file)
+            engine.runAndWait()
+            
             print(f"Saved: {current_file}")
-            current_file = None  # Reset after successful save
+            current_file = None
+
+        engine.stop()
             
     except Exception as e:
         if current_file and os.path.exists(current_file):
@@ -140,4 +146,4 @@ def main(filepath: str, output_dir: str = "output") -> None:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    main("test_text.txt")
+    main("artofwar.epub")
