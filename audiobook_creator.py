@@ -10,7 +10,8 @@ import shutil
 import os
 import re
 import pyttsx3
-import threading
+import time
+from datetime import datetime, timedelta
 
 def setup_nltk():
     """Setup NLTK with SSL workaround for downloads."""
@@ -103,11 +104,50 @@ def get_book_title(filepath: Path) -> str:
    else:
        return filepath.stem.replace(" ", "_")
 
+class ProgressTracker:
+    def __init__(self, total_chapters: int, total_words: int):
+        self.total_chapters = total_chapters
+        self.total_words = total_words
+        self.current_chapter = 0
+        self.processed_words = 0
+        self.start_time = datetime.now()
+    
+    def update(self, chapter_words: int):
+        """Update progress with completed chapter."""
+        self.current_chapter += 1
+        self.processed_words += chapter_words
+        
+        # Calculate progress percentage
+        progress = (self.processed_words / self.total_words) * 100
+        
+        # Calculate time metrics
+        elapsed_time = datetime.now() - self.start_time
+        if self.processed_words > 0:
+            words_per_second = self.processed_words / elapsed_time.total_seconds()
+            remaining_words = self.total_words - self.processed_words
+            estimated_remaining_seconds = remaining_words / words_per_second if words_per_second > 0 else 0
+            eta = timedelta(seconds=int(estimated_remaining_seconds))
+        else:
+            eta = timedelta(0)
+        
+        # Clear line and print progress
+        print(f"\r{' ' * 80}", end="\r")  # Clear line
+        print(
+            f"Progress: {progress:.1f}% | "
+            f"Chapter: {self.current_chapter}/{self.total_chapters} | "
+            f"Time elapsed: {str(elapsed_time).split('.')[0]} | "
+            f"Estimated Time Remaining: {str(eta).split('.')[0]}", 
+            end="\r"
+        )
 
 def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir: str = "output") -> None:
-    """Convert chapters to speech files in book-specific directory."""
+    """Convert chapters to speech files with progress tracking."""
     book_dir = os.path.join(output_dir, re.sub(r'[<>:"/\\|?*]', '_', book_title))
     os.makedirs(book_dir, exist_ok=True)
+    
+    # Calculate total words for progress tracking
+    total_words = sum(len(content.split()) for _, content in chapters)
+    progress = ProgressTracker(len(chapters), total_words)
     
     # Initialize the TTS engine
     engine = pyttsx3.init()
@@ -123,9 +163,12 @@ def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir:
             engine.save_to_file(content, current_file)
             engine.runAndWait()
             
-            print(f"Saved: {current_file}")
+            # Update progress
+            progress.update(len(content.split()))
             current_file = None
-
+            
+        # Print final newline after completion
+        print("\nConversion completed successfully!")
         engine.stop()
             
     except Exception as e:
