@@ -14,7 +14,6 @@ import time
 from datetime import datetime, timedelta
 
 def setup_nltk():
-    """Setup NLTK with SSL workaround for downloads."""
     try:
         _create_unverified_https_context = ssl._create_unverified_context
     except AttributeError:
@@ -25,7 +24,6 @@ def setup_nltk():
     nltk.download('punkt', quiet=True)
 
 def get_chapters(filepath: Path) -> List[tuple[str, str]]:
-    """Extract chapters as (title, content) tuples."""
     suffix = filepath.suffix.lower()
     
     if suffix == '.epub':
@@ -35,12 +33,10 @@ def get_chapters(filepath: Path) -> List[tuple[str, str]]:
         for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
             soup = BeautifulSoup(item.content, 'html.parser')
             
-            # Look for common chapter heading patterns
             chapter_heads = soup.find_all(['h1', 'h2', 'h3'])
             
             if chapter_heads:
                 for head in chapter_heads:
-                    # Get all content until next heading
                     content = []
                     current = head.next_sibling
                     while current and not (isinstance(current, BeautifulSoup) and current.name in ['h1', 'h2', 'h3']):
@@ -51,13 +47,12 @@ def get_chapters(filepath: Path) -> List[tuple[str, str]]:
                         current = current.next_sibling
                     
                     chapter_text = ' '.join(content).strip()
-                    if chapter_text:  # Only add if there's content
+                    if chapter_text:
                         chapters.append((
                             head.get_text().strip() or f"Chapter {len(chapters) + 1}",
                             chapter_text
                         ))
             else:
-                # If no headings found, use all text content
                 text = soup.get_text().strip()
                 if text:
                     chapters.append((
@@ -65,7 +60,6 @@ def get_chapters(filepath: Path) -> List[tuple[str, str]]:
                         text
                     ))
         
-        # If no chapters found, treat entire book as one chapter
         if not chapters:
             all_text = ' '.join(soup.get_text().strip() for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
             if all_text:
@@ -84,12 +78,10 @@ def get_chapters(filepath: Path) -> List[tuple[str, str]]:
             shutil.rmtree(tempdir)
             
     else:
-        # For text files, treat as single chapter
         text = filepath.read_text(encoding='utf-8')
         return [("Chapter 1", text)]
 
 def get_book_title(filepath: Path) -> str:
-   """Extract book title from ebook, fallback to filename."""
    suffix = filepath.suffix.lower()
    
    if suffix == '.epub':
@@ -113,14 +105,11 @@ class ProgressTracker:
         self.start_time = datetime.now()
     
     def update(self, chapter_words: int):
-        """Update progress with completed chapter."""
         self.current_chapter += 1
         self.processed_words += chapter_words
         
-        # Calculate progress percentage
         progress = (self.processed_words / self.total_words) * 100
         
-        # Calculate time metrics
         elapsed_time = datetime.now() - self.start_time
         if self.processed_words > 0:
             words_per_second = self.processed_words / elapsed_time.total_seconds()
@@ -130,7 +119,6 @@ class ProgressTracker:
         else:
             eta = timedelta(0)
         
-        # Clear line and print progress
         print(f"\r{' ' * 80}", end="\r")  # Clear line
         print(
             f"Progress: {progress:.1f}% | "
@@ -141,17 +129,14 @@ class ProgressTracker:
         )
 
 def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir: str = "output") -> None:
-    """Convert chapters to speech files with progress tracking."""
     book_dir = os.path.join(output_dir, re.sub(r'[<>:"/\\|?*]', '_', book_title))
     os.makedirs(book_dir, exist_ok=True)
     
-    # Calculate total words for progress tracking
     total_words = sum(len(content.split()) for _, content in chapters)
     progress = ProgressTracker(len(chapters), total_words)
     
-    # Initialize the TTS engine
     engine = pyttsx3.init()
-    engine.say(".")
+    engine.say(".") # TODO: remove when ttsx3 comes out
     
     current_file = None
     try:
@@ -159,15 +144,12 @@ def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir:
             safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
             current_file = os.path.join(book_dir, f"{i:02d}_{safe_title}.wav")
             
-            # Save the speech to an audio file
             engine.save_to_file(content, current_file)
             engine.runAndWait()
             
-            # Update progress
             progress.update(len(content.split()))
             current_file = None
             
-        # Print final newline after completion
         print("\nConversion completed successfully!")
         engine.stop()
             
@@ -177,7 +159,6 @@ def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir:
         raise e
 
 def main(filepath: str, output_dir: str = "output") -> None:
-    """Main function to process ebook and convert to speech."""
     try:
         setup_nltk()
         book_title = get_book_title(Path(filepath))
