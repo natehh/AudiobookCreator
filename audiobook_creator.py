@@ -17,8 +17,6 @@ from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-app = FastAPI()
-
 def setup_nltk():
     try:
         _create_unverified_https_context = ssl._create_unverified_context
@@ -242,48 +240,3 @@ class AudiobookConverter:
 
 api = AudiobookAPI()
 app = api.app
-
-@app.post("/convert/", response_model=ConversionStatus)
-async def create_conversion(
-    background_tasks: BackgroundTasks,
-    file: UploadFile,
-    output_dir: str = "output"
-):
-    conversions = {}
-    if not file.filename.endswith(('.epub', '.mobi', '.txt')):
-        raise HTTPException(400, "Unsupported file format")
-    
-    temp_path = f"temp_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
-    with open(temp_path, "wb") as f:
-        f.write(await file.read())
-    
-    converter = AudiobookConverter(temp_path, output_dir)
-    
-    conversions[converter.conversion_id] = ConversionStatus(
-        id=converter.conversion_id,
-        status="processing",
-        progress=0.0,
-        temp_file=temp_path,
-        eta=None
-    )
-    
-    background_tasks.add_task(converter.convert)
-    
-    return conversions[converter.conversion_id]
-
-@app.get("/status/{conversion_id}", response_model=ConversionStatus)
-async def get_status(conversion_id: str):
-    if conversion_id not in conversions:
-        raise HTTPException(404, "Conversion not found")
-    return conversions[conversion_id]
-
-@app.delete("/cleanup/{conversion_id}")
-async def cleanup_conversion(conversion_id: str):
-    if conversion_id not in conversions:
-        raise HTTPException(404, "Conversion not found")
-    
-    status = conversions[conversion_id]
-    if status.temp_file and os.path.exists(status.temp_file):
-        os.remove(status.temp_file)
-    
-    return {"message": "Cleanup completed"}
