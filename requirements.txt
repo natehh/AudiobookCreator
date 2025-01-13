@@ -7,3 +7,6 @@ pyttsx3
 EbookLib
 beautifulsoup4
 mobi
+fastapi
+uvicorn
+python-multipart

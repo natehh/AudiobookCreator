@@ -1,6 +1,6 @@
 import ssl
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import nltk
 import ebooklib
 from ebooklib import epub
@@ -10,8 +10,14 @@ import shutil
 import os
 import re
 import pyttsx3
-import time
-from datetime import datetime, timedelta
+import asyncio
+import uuid
+from datetime import datetime
+from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+app = FastAPI()
 
 def setup_nltk():
     try:
@@ -96,78 +102,188 @@ def get_book_title(filepath: Path) -> str:
    else:
        return filepath.stem.replace(" ", "_")
 
-class ProgressTracker:
-    def __init__(self, total_chapters: int, total_words: int):
-        self.total_chapters = total_chapters
-        self.total_words = total_words
-        self.current_chapter = 0
-        self.processed_words = 0
-        self.start_time = datetime.now()
-    
-    def update(self, chapter_words: int):
-        self.current_chapter += 1
-        self.processed_words += chapter_words
-        
-        progress = (self.processed_words / self.total_words) * 100
-        
-        elapsed_time = datetime.now() - self.start_time
-        if self.processed_words > 0:
-            words_per_second = self.processed_words / elapsed_time.total_seconds()
-            remaining_words = self.total_words - self.processed_words
-            estimated_remaining_seconds = remaining_words / words_per_second if words_per_second > 0 else 0
-            eta = timedelta(seconds=int(estimated_remaining_seconds))
-        else:
-            eta = timedelta(0)
-        
-        print(f"\r{' ' * 80}", end="\r")  # Clear line
-        print(
-            f"Progress: {progress:.1f}% | "
-            f"Chapter: {self.current_chapter}/{self.total_chapters} | "
-            f"Time elapsed: {str(elapsed_time).split('.')[0]} | "
-            f"Estimated Time Remaining: {str(eta).split('.')[0]}", 
-            end="\r"
-        )
+class ConversionStatus(BaseModel):
+    id: str
+    status: str
+    progress: float
+    eta: Optional[str] = None
+    output_files: List[str] = []
+    error: Optional[str] = None
+    temp_file: Optional[str] = None
 
-def text_to_speech(chapters: List[tuple[str, str]], book_title: str, output_dir: str = "output") -> None:
-    book_dir = os.path.join(output_dir, re.sub(r'[<>:"/\\|?*]', '_', book_title))
-    os.makedirs(book_dir, exist_ok=True)
+class ConversionStore:
+    def __init__(self):
+        self.conversions: Dict[str, ConversionStatus] = {}
     
-    total_words = sum(len(content.split()) for _, content in chapters)
-    progress = ProgressTracker(len(chapters), total_words)
+    def add(self, status: ConversionStatus):
+        self.conversions[status.id] = status
     
-    engine = pyttsx3.init()
-    engine.say(".") # TODO: remove when ttsx3 comes out
+    def get(self, conversion_id: str) -> Optional[ConversionStatus]:
+        return self.conversions.get(conversion_id)
     
-    current_file = None
-    try:
-        for i, (title, content) in enumerate(chapters, 1):
-            safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
-            current_file = os.path.join(book_dir, f"{i:02d}_{safe_title}.wav")
-            
-            engine.save_to_file(content, current_file)
-            engine.runAndWait()
-            
-            progress.update(len(content.split()))
-            current_file = None
-            
-        print("\nConversion completed successfully!")
-        engine.stop()
-            
-    except Exception as e:
-        if current_file and os.path.exists(current_file):
-            os.remove(current_file)
-        raise e
+    def update(self, conversion_id: str, **kwargs):
+        if conversion_id in self.conversions:
+            current = self.conversions[conversion_id].model_dump()
+            current.update(kwargs)
+            self.conversions[conversion_id] = ConversionStatus(**current)
 
-def main(filepath: str, output_dir: str = "output") -> None:
-    try:
-        setup_nltk()
-        book_title = get_book_title(Path(filepath))
-        chapters = get_chapters(Path(filepath))
-        text_to_speech(chapters, book_title, output_dir)
-    except KeyboardInterrupt:
-        print("\nProcess interrupted by user")
-    except Exception as e:
-        print(f"Error: {e}")
+class AudiobookAPI:
+    def __init__(self):
+        self.app = FastAPI()
+        self.store = ConversionStore()
+        self.setup_routes()
+    
+    def setup_routes(self):
+        @self.app.post("/convert/", response_model=ConversionStatus)
+        async def create_conversion(
+            background_tasks: BackgroundTasks,
+            file: UploadFile,
+            output_dir: str = "output"
+        ):
+            if not file.filename.endswith(('.epub', '.mobi', '.txt')):
+                raise HTTPException(400, "Unsupported file format")
+            
+            temp_path = f"temp_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
+            with open(temp_path, "wb") as f:
+                f.write(await file.read())
+            
+            converter = AudiobookConverter(temp_path, output_dir, self.store)
+            
+            status = ConversionStatus(
+                id=converter.conversion_id,
+                status="processing",
+                progress=0.0,
+                temp_file=temp_path
+            )
+            self.store.add(status)
+            
+            background_tasks.add_task(converter.convert)
+            
+            return status
 
-if __name__ == "__main__":
-    main("artofwar.epub")
+        @self.app.get("/status/{conversion_id}", response_model=ConversionStatus)
+        async def get_status(conversion_id: str):
+            status = self.store.get(conversion_id)
+            if not status:
+                raise HTTPException(404, "Conversion not found")
+            return status
+
+        @self.app.delete("/cleanup/{conversion_id}")
+        async def cleanup_conversion(conversion_id: str):
+            status = self.store.get(conversion_id)
+            if not status:
+                raise HTTPException(404, "Conversion not found")
+            
+            if status.temp_file and os.path.exists(status.temp_file):
+                os.remove(status.temp_file)
+            
+            return {"message": "Cleanup completed"}
+
+class AudiobookConverter:
+    def __init__(self, file_path: str, output_dir: str, store: ConversionStore):
+        self.file_path = file_path
+        self.output_dir = output_dir
+        self.store = store
+        self.conversion_id = str(uuid.uuid4())
+        
+    async def cleanup(self):
+        """Remove temporary uploaded file"""
+        if os.path.exists(self.file_path):
+            try:
+                os.remove(self.file_path)
+            except OSError as e:
+                print(f"Error cleaning up {self.file_path}: {e}")
+        
+    async def convert(self):
+        try:
+            setup_nltk()
+            book_title = get_book_title(Path(self.file_path))
+            chapters = get_chapters(Path(self.file_path))
+            
+            book_dir = os.path.join(self.output_dir, re.sub(r'[<>:"/\\|?*]', '_', book_title))
+            os.makedirs(book_dir, exist_ok=True)
+            
+            total_words = sum(len(content.split()) for _, content in chapters)
+            processed_words = 0
+            
+            engine = pyttsx3.init()
+            engine.say(".")  # TODO: remove when ttsx3 bug is fixed
+            
+            for i, (title, content) in enumerate(chapters, 1):
+                safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
+                output_file = os.path.join(book_dir, f"{i:02d}_{safe_title}.wav")
+                
+                engine.save_to_file(content, output_file)
+                engine.runAndWait()
+                
+                processed_words += len(content.split())
+                progress = (processed_words / total_words) * 100
+                
+                self.store.update(
+                    self.conversion_id,
+                    progress=progress,
+                    output_files=[*self.store.get(self.conversion_id).output_files, output_file]
+                )
+                
+                await asyncio.sleep(0) 
+            
+            engine.stop()
+            self.store.update(self.conversion_id, status="completed")
+            
+        except Exception as e:
+            self.store.update(
+                self.conversion_id,
+                status="failed",
+                error=str(e)
+            )
+            raise
+        finally:
+            await self.cleanup()
+
+api = AudiobookAPI()
+app = api.app
+
+@app.post("/convert/", response_model=ConversionStatus)
+async def create_conversion(
+    background_tasks: BackgroundTasks,
+    file: UploadFile,
+    output_dir: str = "output"
+):
+    conversions = {}
+    if not file.filename.endswith(('.epub', '.mobi', '.txt')):
+        raise HTTPException(400, "Unsupported file format")
+    
+    temp_path = f"temp_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
+    with open(temp_path, "wb") as f:
+        f.write(await file.read())
+    
+    converter = AudiobookConverter(temp_path, output_dir)
+    
+    conversions[converter.conversion_id] = ConversionStatus(
+        id=converter.conversion_id,
+        status="processing",
+        progress=0.0,
+        temp_file=temp_path,
+        eta=None
+    )
+    
+    background_tasks.add_task(converter.convert)
+    
+    return conversions[converter.conversion_id]
+
+@app.get("/status/{conversion_id}", response_model=ConversionStatus)
+async def get_status(conversion_id: str):
+    if conversion_id not in conversions:
+        raise HTTPException(404, "Conversion not found")
+    return conversions[conversion_id]
+
+@app.delete("/cleanup/{conversion_id}")
+async def cleanup_conversion(conversion_id: str):
+    if conversion_id not in conversions:
+        raise HTTPException(404, "Conversion not found")
+    
+    status = conversions[conversion_id]
+    if status.temp_file and os.path.exists(status.temp_file):
+        os.remove(status.temp_file)
+    
+    return {"message": "Cleanup completed"}
