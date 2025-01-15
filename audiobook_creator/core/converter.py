@@ -7,6 +7,10 @@ from pathlib import Path
 from ..utils.nltk_setup import setup_nltk
 from ..utils.ebook import get_chapters, get_book_title
 from ..core.store import ConversionStore
+import logging
+
+logger = logging.getLogger()
+logging.basicConfig(level=logging.INFO)
 
 class AudiobookConverter:
     """Handles the conversion of ebooks to audiobooks."""
@@ -22,7 +26,7 @@ class AudiobookConverter:
             try:
                 os.remove(self.file_path)
             except OSError as e:
-                print(f"Error cleaning up {self.file_path}: {e}")
+                logger.error(f"Error cleaning up {self.file_path}: {e}")
         
     async def convert(self):
         """Convert ebook to audiobook chapters."""
