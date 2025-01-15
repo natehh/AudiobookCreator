@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  audiobook-creator:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+      - ./tmp:/app/tmp
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONASYNCIODEBUG=1
+    restart: unless-stopped
+    # Add logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
