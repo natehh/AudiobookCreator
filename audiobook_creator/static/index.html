@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiobook Creator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+        .upload-area.dragover {
+            border-color: #2196F3;
+            background-color: #E3F2FD;
+        }
+        .progress-container {
+            display: none;
+            margin-top: 2rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        .status {
+            margin-top: 1rem;
+            text-align: center;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #f44336;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audiobook Creator</h1>
+        <div class="upload-area" id="dropZone">
+            <p>Drag and drop your ebook file here or click to select</p>
+            <p>Supported formats: .epub, .mobi, .txt</p>
+            <input type="file" id="fileInput" accept=".epub,.mobi,.txt" style="display: none">
+        </div>
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <div class="status" id="status">Preparing conversion...</div>
+            <button id="cleanupBtn" style="display: none">Clean up</button>
+        </div>
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        const API_URL = '';
+        let currentConversionId = null;
+        let statusCheckInterval = null;
+
+        // Setup drag and drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('status');
+        const errorText = document.getElementById('error');
+        const cleanupBtn = document.getElementById('cleanupBtn');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFile(file);
+        });
+
+        async function handleFile(file) {
+            if (!file) return;
+
+            const validExtensions = ['.epub', '.mobi', '.txt'];
+            const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            
+            if (!validExtensions.includes(fileExtension)) {
+                errorText.textContent = 'Unsupported file format. Please use .epub, .mobi, or .txt files.';
+                return;
+            }
+
+            errorText.textContent = '';
+            progressContainer.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/convert/`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Conversion failed to start');
+                }
+
+                const data = await response.json();
+                currentConversionId = data.id;
+                startProgressCheck();
+                
+            } catch (error) {
+                errorText.textContent = `Error: ${error.message}`;
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        function startProgressCheck() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+
+            statusCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_URL}/status/${currentConversionId}`);
+                    const data = await response.json();
+                    
+                    progressBar.style.width = `${data.progress * 100}%`;
+                    statusText.textContent = `Status: ${data.status} (${Math.round(data.progress * 100)}%)`;
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(statusCheckInterval);
+                        cleanupBtn.style.display = 'block';
+                        
+                        if (data.status === 'failed') {
+                            errorText.textContent = 'Conversion failed';
+                        }
+                    }
+                } catch (error) {
+                    clearInterval(statusCheckInterval);
+                    errorText.textContent = 'Error checking conversion status';
+                }
+            }, 1000);
+        }
+
+        cleanupBtn.addEventListener('click', async () => {
+            try {
+                await fetch(`${API_URL}/cleanup/${currentConversionId}`, {
+                    method: 'DELETE'
+                });
+                progressContainer.style.display = 'none';
+                cleanupBtn.style.display = 'none';
+                currentConversionId = null;
+            } catch (error) {
+                errorText.textContent = 'Error during cleanup';
+            }
+        });
+    </script>
+</body>
+</html>

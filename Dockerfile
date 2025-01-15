@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     espeak \
     libespeak1 \
     libespeak-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

@@ -2,6 +2,9 @@ import os
 import uuid
 from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
 from .models import ConversionStatus
@@ -12,6 +15,7 @@ class AudiobookAPI:
         self.app = FastAPI()
         self.store = ConversionStore()
         self._setup_middleware()
+        self._setup_static_files()
         self.setup_routes()
     
     def _setup_middleware(self):
@@ -23,9 +27,21 @@ class AudiobookAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    def _setup_static_files(self):
+        """Configure static file serving."""
+        static_dir = Path(__file__).parent.parent / "static"
+        static_dir.mkdir(exist_ok=True)
+        self.app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     
     def setup_routes(self):
         """Configure API routes."""
+        @self.app.get("/")
+        async def read_root():
+            """Serve the main HTML page."""
+            static_dir = Path(__file__).parent.parent / "static"
+            return FileResponse(static_dir / "index.html")
+        
         @self.app.post("/convert/", response_model=ConversionStatus)
         async def create_conversion(
             background_tasks: BackgroundTasks,
