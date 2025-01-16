@@ -24,6 +24,7 @@ class AudiobookConverter:
         """Remove temporary uploaded file."""
         if os.path.exists(self.file_path):
             try:
+                logger.info(f"Removing {self.file_path}")
                 os.remove(self.file_path)
             except OSError as e:
                 logger.error(f"Error cleaning up {self.file_path}: {e}")
@@ -33,6 +34,7 @@ class AudiobookConverter:
         try:
             setup_nltk()
             book_title = get_book_title(Path(self.file_path))
+            logger.info(f"Found book title: {book_title}")
             chapters = get_chapters(Path(self.file_path))
             
             book_dir = os.path.join(self.output_dir, 
