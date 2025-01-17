@@ -79,7 +79,7 @@ class AudiobookConverter:
             logger.info(f"Chapter {chapter_num} already exists, skipping: {output_file}")
             self.store.update(
                 self.conversion_id,
-                progress=(processed_chars + len(content)) / total_chars * 100,
+                progress=(processed_chars + len(content)) / total_chars,
                 output_files=[*self.store.get(self.conversion_id).output_files, 
                             output_file]
             )
@@ -92,8 +92,8 @@ class AudiobookConverter:
             engine.save_to_file(content, output_file)
             engine.runAndWait()
             
-            progress = (processed_chars + len(content)) / total_chars * 100
-            logger.info(f"{progress}% of book converted")
+            progress = (processed_chars + len(content)) / total_chars
+            logger.info(f"{progress*100}% of book converted")
             self.store.update(
                 self.conversion_id,
                 progress=progress,
