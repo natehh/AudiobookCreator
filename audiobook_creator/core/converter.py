@@ -13,15 +13,19 @@ logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
 
 class AudiobookConverter:
-    """Handles the conversion of ebooks to audiobooks."""
     def __init__(self, file_path: str, output_dir: str, store: ConversionStore):
         self.file_path = file_path
         self.output_dir = output_dir
         self.store = store
         self.conversion_id = str(uuid.uuid4())
+
+    def sanitize_filename(self, filename):
+        valid_name = "".join(c for c in filename if c.isalnum() or c in "._- ").replace(" ", "_")
+        if not valid_name.endswith('.wav'):
+            valid_name += '.wav'
+        return valid_name
         
     async def cleanup(self):
-        """Remove temporary uploaded file."""
         if os.path.exists(self.file_path):
             try:
                 logger.info(f"Removing {self.file_path}")
@@ -36,16 +40,27 @@ class AudiobookConverter:
             book_title = get_book_title(Path(self.file_path))
             logger.info(f"Found book title: {book_title}")
             chapters = get_chapters(Path(self.file_path))
+            logger.info(f"Found {len(chapters)} chapters")
+            
+            total_chars = sum(len(content) for _, content in chapters)
+            logger.info(f"Total characters to process: {total_chars}")
             
             book_dir = os.path.join(self.output_dir, 
-                                  re.sub(r'[<>:"/\\|?*]', '_', book_title))
+                                re.sub(r'[<>:"/\\|?*]', '_', book_title))
             os.makedirs(book_dir, exist_ok=True)
+            logger.info(f"Created book directory: {book_dir}")
             
-            await self._process_chapters(chapters, book_dir)
+            processed_chars = 0
+            for i, (title, content) in enumerate(chapters, 1):
+                logger.info(f"Starting chapter {i}: {title}")
+                await self._process_single_chapter(i, title, content, book_dir, processed_chars, total_chars)
+                processed_chars += len(content)
+                logger.info(f"Completed chapter {i}")
             
             self.store.update(self.conversion_id, status="completed")
             
         except Exception as e:
+            logger.error(f"Conversion error: {str(e)}", exc_info=True)
             self.store.update(
                 self.conversion_id,
                 status="failed",
@@ -54,25 +69,21 @@ class AudiobookConverter:
             raise
         finally:
             await self.cleanup()
-    
-    async def _process_chapters(self, chapters, book_dir):
-        """Process individual chapters and convert to audio."""
-        total_words = sum(len(content.split()) for _, content in chapters)
-        processed_words = 0
+
+    async def _process_single_chapter(self, chapter_num, title, content, book_dir, processed_chars, total_chars):
+        """Process a single chapter with its own engine instance."""
+        safe_title = self.sanitize_filename(title)
+        output_file = os.path.join(book_dir, f"{chapter_num:02d}_{safe_title}")
         
-        engine = pyttsx3.init()
-        engine.say(".")  # TODO: remove when ttsx3 bug is fixed
-        
-        for i, (title, content) in enumerate(chapters, 1):
-            safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
-            output_file = os.path.join(book_dir, f"{i:02d}_{safe_title}.wav")
+        try:
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 150)
             
             engine.save_to_file(content, output_file)
             engine.runAndWait()
             
-            processed_words += len(content.split())
-            progress = (processed_words / total_words) * 100
-            
+            progress = (processed_chars + len(content)) / total_chars * 100
+            logger.info(f"{progress}% of book converted")
             self.store.update(
                 self.conversion_id,
                 progress=progress,
@@ -80,6 +91,11 @@ class AudiobookConverter:
                             output_file]
             )
             
-            await asyncio.sleep(0)
-        
-        engine.stop()
+            engine.stop()
+            del engine
+            
+            await asyncio.sleep(1)
+            
+        except Exception as e:
+            logger.error(f"Error processing chapter {chapter_num}: {str(e)}", exc_info=True)
+            raise

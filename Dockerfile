@@ -7,7 +7,13 @@ RUN apt-get update && apt-get install -y \
     libespeak1 \
     libespeak-dev \
     ffmpeg \
+    alsa-utils \
+    libasound2 \
+    libasound2-plugins \
+    pulseaudio \
     && rm -rf /var/lib/apt/lists/*
+
+RUN echo "pcm.!default { type null }" > /etc/asound.conf
 
 # Set working directory
 WORKDIR /app
