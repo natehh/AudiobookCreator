@@ -4,6 +4,7 @@ from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi import WebSocket
 from pathlib import Path
 from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
@@ -14,6 +15,7 @@ class AudiobookAPI:
     def __init__(self):
         self.app = FastAPI()
         self.store = ConversionStore()
+        self.active_connections = []
         self._setup_middleware()
         self._setup_static_files()
         self.setup_routes()
@@ -36,6 +38,16 @@ class AudiobookAPI:
     
     def setup_routes(self):
         """Configure API routes."""
+        @self.app.websocket("/ws/{conversion_id}")
+        async def websocket_endpoint(websocket: WebSocket, conversion_id: str):
+            await websocket.accept()
+            self.active_connections.append((conversion_id, websocket))
+            try:
+                while True:
+                    await websocket.receive_text()  # Keep connection alive
+            except:
+                self.active_connections.remove((conversion_id, websocket))
+                
         @self.app.get("/")
         async def read_root():
             """Serve the main HTML page."""

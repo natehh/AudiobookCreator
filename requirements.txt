@@ -8,3 +8,4 @@ ebooklib==0.18
 beautifulsoup4==4.12.3
 pydantic==2.6.1
 python-multipart==0.0.9
+websockets==11.0.3

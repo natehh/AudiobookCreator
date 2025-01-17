@@ -1,10 +1,21 @@
 from typing import Dict, Optional
 from ..api.models import ConversionStatus
+import asyncio
 
 class ConversionStore:
     """Store for managing conversion status updates."""
     def __init__(self):
         self.conversions: Dict[str, ConversionStatus] = {}
+        self.app = None
+
+    async def broadcast_update(self, conversion_id: str, status: ConversionStatus):
+        if hasattr(self, 'app'):
+            for cid, websocket in self.app.active_connections:
+                if cid == conversion_id:
+                    try:
+                        await websocket.send_json(status.dict())
+                    except:
+                        continue
     
     def add(self, status: ConversionStatus):
         """Add a new conversion status."""
@@ -16,7 +27,8 @@ class ConversionStore:
     
     def update(self, conversion_id: str, **kwargs):
         """Update status of a specific conversion."""
-        if conversion_id in self.conversions:
-            current = self.conversions[conversion_id].model_dump()
-            current.update(kwargs)
-            self.conversions[conversion_id] = ConversionStatus(**current)
+        status = self.conversions.get(conversion_id)
+        if status:
+            for key, value in kwargs.items():
+                setattr(status, key, value)
+            asyncio.create_task(self.broadcast_update(conversion_id, status))

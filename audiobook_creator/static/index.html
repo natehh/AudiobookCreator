@@ -92,6 +92,7 @@
         const API_URL = '';
         let currentConversionId = null;
         let statusCheckInterval = null;
+        let ws = null;
 
         // Setup drag and drop
         const dropZone = document.getElementById('dropZone');
@@ -150,12 +151,49 @@
 
                 const data = await response.json();
                 currentConversionId = data.id;
-                startProgressCheck();
+                // startProgressCheck();
+                startWebSocketConnection(currentConversionId);
                 
             } catch (error) {
                 errorText.textContent = `Error: ${error.message}`;
                 progressContainer.style.display = 'none';
             }
+        }
+        function startWebSocketConnection(conversionId) {
+            if (ws) {
+                ws.close();
+            }
+
+            // Use secure WebSocket if the page is served over HTTPS
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${conversionId}`;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                progressBar.style.width = `${data.progress}%`;
+                statusText.textContent = `Status: ${data.status} (${Math.round(data.progress)}%)`;
+
+                if (data.status === 'completed' || data.status === 'failed') {
+                    cleanupBtn.style.display = 'block';
+                    if (data.status === 'failed') {
+                        errorText.textContent = data.error || 'Conversion failed';
+                    }
+                    ws.close();
+                }
+            };
+
+            ws.onerror = (error) => {
+                errorText.textContent = 'WebSocket connection error';
+                // Fallback to polling if WebSocket fails
+                startProgressCheck();
+            };
+
+            ws.onclose = () => {
+                // Optional: implement reconnection logic here
+                console.log('WebSocket connection closed');
+            };
         }
 
         function startProgressCheck() {
