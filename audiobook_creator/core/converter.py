@@ -74,6 +74,16 @@ class AudiobookConverter:
         """Process a single chapter with its own engine instance."""
         safe_title = self.sanitize_filename(title)
         output_file = os.path.join(book_dir, f"{chapter_num:02d}_{safe_title}")
+
+        if os.path.exists(output_file):
+            logger.info(f"Chapter {chapter_num} already exists, skipping: {output_file}")
+            self.store.update(
+                self.conversion_id,
+                progress=(processed_chars + len(content)) / total_chars * 100,
+                output_files=[*self.store.get(self.conversion_id).output_files, 
+                            output_file]
+            )
+            return
         
         try:
             engine = pyttsx3.init()
