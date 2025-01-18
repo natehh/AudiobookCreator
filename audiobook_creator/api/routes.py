@@ -14,7 +14,7 @@ class AudiobookAPI:
     """FastAPI application for audiobook conversion."""
     def __init__(self):
         self.app = FastAPI()
-        self.store = ConversionStore()
+        self.store = ConversionStore(self)
         self.active_connections = []
         self._setup_middleware()
         self._setup_static_files()
@@ -47,7 +47,7 @@ class AudiobookAPI:
                     await websocket.receive_text()  # Keep connection alive
             except:
                 self.active_connections.remove((conversion_id, websocket))
-                
+
         @self.app.get("/")
         async def read_root():
             """Serve the main HTML page."""

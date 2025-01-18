@@ -4,12 +4,12 @@ import asyncio
 
 class ConversionStore:
     """Store for managing conversion status updates."""
-    def __init__(self):
+    def __init__(self, app=None):
         self.conversions: Dict[str, ConversionStatus] = {}
-        self.app = None
+        self.app = app
 
     async def broadcast_update(self, conversion_id: str, status: ConversionStatus):
-        if hasattr(self, 'app'):
+        if self.app and hasattr(self.app, 'active_connections'):
             for cid, websocket in self.app.active_connections:
                 if cid == conversion_id:
                     try:

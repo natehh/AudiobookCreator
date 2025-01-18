@@ -172,8 +172,11 @@
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                progressBar.style.width = `${data.progress}%`;
-                statusText.textContent = `Status: ${data.status} (${Math.round(data.progress)}%)`;
+                // progressBar.style.width = `${data.progress}%`;
+                // statusText.textContent = `Status: ${data.status} (${Math.round(data.progress)}%)`;
+
+                progressBar.style.width = `${data.progress * 100}%`;
+                statusText.textContent = `Status: ${data.status} (${Math.round(data.progress * 100)}%)`;
 
                 if (data.status === 'completed' || data.status === 'failed') {
                     cleanupBtn.style.display = 'block';
