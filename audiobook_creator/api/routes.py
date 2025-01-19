@@ -9,6 +9,8 @@ from pathlib import Path
 from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
 from .models import ConversionStatus
+from zipfile import ZipFile
+import tempfile
 
 class AudiobookAPI:
     """FastAPI application for audiobook conversion."""
@@ -98,3 +100,27 @@ class AudiobookAPI:
                 os.remove(status.temp_file)
             
             return {"message": "Cleanup completed"}
+        
+        @self.app.get("/download/{conversion_id}")
+        async def download_audiobook(conversion_id: str):
+            status = self.store.get(conversion_id)
+            if not status:
+                raise HTTPException(404, "Conversion not found")
+            if status.status != "completed":
+                raise HTTPException(400, "Conversion not yet completed")
+            
+            with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
+                with ZipFile(tmp.name, 'w') as zip_file:
+                    for output_file in status.output_files:
+                        file_path = Path(output_file)
+                        if file_path.exists():
+                            zip_file.write(file_path, file_path.name)
+                        else:
+                            raise HTTPException(404, f"Audio file {file_path.name} not found")
+                
+                return FileResponse(
+                    path=tmp.name,
+                    filename=f"audiobook_{conversion_id}.zip",
+                    media_type="application/zip",
+                    background=BackgroundTasks().add_task(lambda: os.unlink(tmp.name))
+                )

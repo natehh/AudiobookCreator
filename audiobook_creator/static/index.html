@@ -68,6 +68,10 @@
             color: #f44336;
             margin-top: 1rem;
         }
+        .download-btn {
+            background-color: #2196F3;
+            margin-right: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -84,6 +88,7 @@
             </div>
             <div class="status" id="status">Preparing conversion...</div>
             <button id="cleanupBtn" style="display: none">Clean up</button>
+            <button id="downloadBtn" style="display: none" class="download-btn">Download Audiobook</button>
         </div>
         <div class="error" id="error"></div>
     </div>
@@ -102,6 +107,7 @@
         const statusText = document.getElementById('status');
         const errorText = document.getElementById('error');
         const cleanupBtn = document.getElementById('cleanupBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
 
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => {
@@ -172,9 +178,6 @@
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                // progressBar.style.width = `${data.progress}%`;
-                // statusText.textContent = `Status: ${data.status} (${Math.round(data.progress)}%)`;
-
                 progressBar.style.width = `${data.progress * 100}%`;
                 statusText.textContent = `Status: ${data.status} (${Math.round(data.progress * 100)}%)`;
 
@@ -182,6 +185,11 @@
                     cleanupBtn.style.display = 'block';
                     if (data.status === 'failed') {
                         errorText.textContent = data.error || 'Conversion failed';
+                    } else if (data.status === 'completed') {
+                        downloadBtn.style.display = 'block';
+                        downloadBtn.onclick = () => {
+                            window.location.href = `${API_URL}/download/${currentConversionId}`;
+                        };
                     }
                     ws.close();
                 }
