@@ -100,3 +100,18 @@ def _get_mobi_title(filepath: Path) -> str:
         return get_book_title(Path(mobipath)).replace(" ", "_")
     finally:
         shutil.rmtree(tempdir)
+
+def get_book_metadata(filepath: Path) -> dict:
+    """Extract book metadata from various formats."""
+    suffix = filepath.suffix.lower()
+    
+    if suffix == '.epub':
+        book = epub.read_epub(str(filepath))
+        creator = book.get_metadata('DC', 'creator')
+        author = creator[0][0] if creator else "Unknown Author"
+        title = book.get_metadata('DC', 'title')[0][0]
+        return {"title": title, "author": author}
+    elif suffix == '.mobi':
+        return {"title": filepath.stem, "author": "Unknown Author"}
+    else:
+        return {"title": filepath.stem, "author": "Unknown Author"}

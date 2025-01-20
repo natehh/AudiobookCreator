@@ -109,18 +109,12 @@ class AudiobookAPI:
             if status.status != "completed":
                 raise HTTPException(400, "Conversion not yet completed")
             
-            with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
-                with ZipFile(tmp.name, 'w') as zip_file:
-                    for output_file in status.output_files:
-                        file_path = Path(output_file)
-                        if file_path.exists():
-                            zip_file.write(file_path, file_path.name)
-                        else:
-                            raise HTTPException(404, f"Audio file {file_path.name} not found")
-                
-                return FileResponse(
-                    path=tmp.name,
-                    filename=f"audiobook_{conversion_id}.zip",
-                    media_type="application/zip",
-                    background=BackgroundTasks().add_task(lambda: os.unlink(tmp.name))
-                )
+            output_file = Path(status.output_files[0])
+            if not output_file.exists():
+                raise HTTPException(404, "Audio file not found")
+            
+            return FileResponse(
+                path=output_file,
+                filename=output_file.name,
+                media_type="audio/mpeg"
+            )
