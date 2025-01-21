@@ -3,14 +3,7 @@ FROM python:3.9-slim
 # Add logging during build
 RUN echo "Installing system dependencies..."
 RUN apt-get update && apt-get install -y \
-    espeak \
-    libespeak1 \
-    libespeak-dev \
     ffmpeg \
-    alsa-utils \
-    libasound2 \
-    libasound2-plugins \
-    pulseaudio \
     && rm -rf /var/lib/apt/lists/*
 
 RUN echo "pcm.!default { type null }" > /etc/asound.conf

@@ -2,7 +2,6 @@ import os
 import re
 import uuid
 import asyncio
-import pyttsx3
 from pathlib import Path
 from ..utils.nltk_setup import setup_nltk
 from ..utils.ebook import get_chapters, get_book_title, get_book_metadata
@@ -10,6 +9,8 @@ from ..core.store import ConversionStore
 import logging
 from pydub import AudioSegment
 from mutagen.mp4 import MP4
+import edge_tts
+import aiofiles
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -83,17 +84,17 @@ class AudiobookConverter:
             await self.cleanup()
 
     async def _process_single_chapter(self, chapter_num, title, content, book_dir, processed_chars, total_chars):
-        """Process a single chapter and save as temporary WAV."""
-        temp_file = os.path.join(book_dir, f"temp_{chapter_num:02d}.wav")
+        """Process a single chapter and save as MP3."""
+        temp_file = os.path.join(book_dir, f"temp_{chapter_num:02d}.mp3")
         
         if not os.path.exists(temp_file):
             try:
-                engine = pyttsx3.init()
-                engine.setProperty('rate', 150)
-                engine.save_to_file(content, temp_file)
-                engine.runAndWait()
-                engine.stop()
-                del engine
+                communicate = edge_tts.Communicate(content, 'en-US-ChristopherNeural')
+                
+                async with aiofiles.open(temp_file, mode="wb") as file:
+                    async for chunk in communicate.stream():
+                        if chunk["type"] == "audio":
+                            await file.write(chunk["data"])
                 
                 progress = (processed_chars + len(content)) / total_chars
                 logger.info(f"{progress*100}% of book converted")
@@ -108,20 +109,19 @@ class AudiobookConverter:
                 logger.error(f"Error processing chapter {chapter_num}: {str(e)}", exc_info=True)
                 raise
         
-        return temp_file, title, len(AudioSegment.from_wav(temp_file))
+        return temp_file, title, len(AudioSegment.from_mp3(temp_file))
     
     def _create_m4b(self, book_dir, book_title, chapter_files):
         """Combine chapter files into single M4B with chapters and metadata."""
         output_file = os.path.join(book_dir, f"{book_title}.m4b")
         
-        # Combine audio files
         combined = AudioSegment.empty()
         chapter_times = []
         total_time = 0
         
         for temp_file, title, duration in chapter_files:
             chapter_times.append((total_time, title))
-            audio = AudioSegment.from_wav(temp_file)
+            audio = AudioSegment.from_mp3(temp_file)
             combined += audio
             total_time += duration
             os.remove(temp_file)
