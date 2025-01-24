@@ -12,3 +12,4 @@ mutagen
 pydub
 edge-tts
 aiofiles
+sqlalchemy
