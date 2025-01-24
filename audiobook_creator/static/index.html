@@ -30,23 +30,6 @@
             border-color: #2196F3;
             background-color: #E3F2FD;
         }
-        .progress-container {
-            display: none;
-            margin-top: 2rem;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress {
-            width: 0%;
-            height: 100%;
-            background-color: #4CAF50;
-            transition: width 0.3s ease;
-        }
         .status {
             margin-top: 1rem;
             text-align: center;
@@ -82,14 +65,6 @@
             <p>Supported formats: .epub, .mobi, .txt</p>
             <input type="file" id="fileInput" accept=".epub,.mobi,.txt" style="display: none">
         </div>
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar">
-                <div class="progress" id="progressBar"></div>
-            </div>
-            <div class="status" id="status">Preparing conversion...</div>
-            <button id="cleanupBtn" style="display: none">Clean up</button>
-            <button id="downloadBtn" style="display: none" class="download-btn">Download Audiobook</button>
-        </div>
         <div class="error" id="error"></div>
     </div>
 
@@ -102,11 +77,8 @@
         // Setup drag and drop
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
         const statusText = document.getElementById('status');
         const errorText = document.getElementById('error');
-        const cleanupBtn = document.getElementById('cleanupBtn');
         const downloadBtn = document.getElementById('downloadBtn');
 
         dropZone.addEventListener('click', () => fileInput.click());
@@ -160,91 +132,8 @@
                 
             } catch (error) {
                 errorText.textContent = `Error: ${error.message}`;
-                progressContainer.style.display = 'none';
             }
         }
-        function startWebSocketConnection(conversionId) {
-            if (ws) {
-                ws.close();
-            }
-
-            // Use secure WebSocket if the page is served over HTTPS
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws/${conversionId}`;
-            
-            ws = new WebSocket(wsUrl);
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                progressBar.style.width = `${data.progress * 100}%`;
-                statusText.textContent = `Status: ${data.status} (${Math.round(data.progress * 100)}%)`;
-
-                if (data.status === 'completed' || data.status === 'failed') {
-                    cleanupBtn.style.display = 'block';
-                    if (data.status === 'failed') {
-                        errorText.textContent = data.error || 'Conversion failed';
-                    } else if (data.status === 'completed') {
-                        downloadBtn.style.display = 'block';
-                        downloadBtn.onclick = () => {
-                            window.location.href = `${API_URL}/download/${currentConversionId}`;
-                        };
-                    }
-                    ws.close();
-                }
-            };
-
-            ws.onerror = (error) => {
-                errorText.textContent = 'WebSocket connection error';
-                // Fallback to polling if WebSocket fails
-                startProgressCheck();
-            };
-
-            ws.onclose = () => {
-                // Optional: implement reconnection logic here
-                console.log('WebSocket connection closed');
-            };
-        }
-
-        function startProgressCheck() {
-            if (statusCheckInterval) {
-                clearInterval(statusCheckInterval);
-            }
-
-            statusCheckInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_URL}/status/${currentConversionId}`);
-                    const data = await response.json();
-                    
-                    progressBar.style.width = `${data.progress * 100}%`;
-                    statusText.textContent = `Status: ${data.status} (${Math.round(data.progress * 100)}%)`;
-
-                    if (data.status === 'completed' || data.status === 'failed') {
-                        clearInterval(statusCheckInterval);
-                        cleanupBtn.style.display = 'block';
-                        
-                        if (data.status === 'failed') {
-                            errorText.textContent = 'Conversion failed';
-                        }
-                    }
-                } catch (error) {
-                    clearInterval(statusCheckInterval);
-                    errorText.textContent = 'Error checking conversion status';
-                }
-            }, 1000);
-        }
-
-        cleanupBtn.addEventListener('click', async () => {
-            try {
-                await fetch(`${API_URL}/cleanup/${currentConversionId}`, {
-                    method: 'DELETE'
-                });
-                progressContainer.style.display = 'none';
-                cleanupBtn.style.display = 'none';
-                currentConversionId = null;
-            } catch (error) {
-                errorText.textContent = 'Error during cleanup';
-            }
-        });
     </script>
 </body>
 </html>
