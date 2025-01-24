@@ -132,16 +132,16 @@ class AudiobookConverter:
         # Add chapters and metadata
         audio = MP4(output_file)
         
-        chaps = []
-        for i, (start_time, title) in enumerate(chapter_times):
-            end_time = chapter_times[i+1][0] if i < len(chapter_times)-1 else total_time
-            chaps.extend([
-                str(start_time),
-                str(end_time),
-                title
-            ])
+        # chaps = []
+        # for i, (start_time, title) in enumerate(chapter_times):
+        #     end_time = chapter_times[i+1][0] if i < len(chapter_times)-1 else total_time
+        #     chaps.extend([
+        #         str(start_time),
+        #         str(end_time),
+        #         title
+        #     ])
         
-        audio.tags['©chp'] = chaps
+        # audio.tags['©chp'] = chaps
         
         audio['\xa9nam'] = [book_title]
         if hasattr(self, 'author'):

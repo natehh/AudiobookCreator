@@ -82,6 +82,13 @@ class AudiobookAPI:
             background_tasks.add_task(converter.convert)
             
             return status
+        
+        @self.app.get("/conversion/{conversion_id}")
+        async def conversion_page(conversion_id: str):
+            """Serve the conversion-specific page."""
+            static_dir = Path(__file__).parent.parent / "static"
+            return FileResponse(static_dir / "conversion.html")
+
 
         @self.app.get("/status/{conversion_id}", response_model=ConversionStatus)
         async def get_status(conversion_id: str):
