@@ -21,7 +21,7 @@ COPY .env .env
 RUN pip install --no-cache-dir -r requirements.txt -v
 
 # Copy application code
-COPY ./audiobook_creator ./audiobook_creator
+COPY ./audiobook_creator /app/audiobook_creator
 
 # Create directories with feedback
 RUN echo "Creating directories..." && \
