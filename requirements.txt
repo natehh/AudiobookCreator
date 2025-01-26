@@ -13,3 +13,5 @@ pydub
 edge-tts
 aiofiles
 sqlalchemy
+requests
+python-dotenv

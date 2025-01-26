@@ -10,7 +10,7 @@ def login_google():
     """Redirects user to Google's OAuth login page."""
     return RedirectResponse(get_google_auth_url())
 
-@auth_router.get("/auth/callback")
+@auth_router.get("/callback/google")
 def auth_callback(code: str, db=Depends(get_db)):
     """Handles the Google OAuth callback."""
     user = handle_google_callback(code, db)
