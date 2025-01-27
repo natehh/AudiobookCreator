@@ -8,13 +8,14 @@ services:
     volumes:
       - ./output:/app/output
       - ./tmp:/app/tmp
+      - ./data:/app/data 
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONASYNCIODEBUG=1
       - ESPEAK_DATA_PATH=/usr/share/espeak-data
       - AUDIODEV=null
+      - SQLALCHEMY_DATABASE_URL=sqlite:////app/data/audiobookcreator.db
     restart: unless-stopped
-    # Add logging configuration
     logging:
       driver: "json-file"
       options:

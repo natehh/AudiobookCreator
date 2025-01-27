@@ -1,8 +1,12 @@
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import logging
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+SQLALCHEMY_DATABASE_URL = "sqlite:////app/data/audiobookcreator.db"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -36,5 +40,7 @@ def get_db():
     finally:
         db.close()
 
-# Initialize the database
-Base.metadata.create_all(bind=engine)
+def initialize_db():
+    logger.info("Creating database and tables...")
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database and tables created.")

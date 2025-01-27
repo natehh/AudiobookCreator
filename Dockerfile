@@ -4,9 +4,12 @@ FROM python:3.9-slim
 RUN echo "Installing system dependencies..."
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN echo "pcm.!default { type null }" > /etc/asound.conf
+
+RUN mkdir -p /app/data && chmod -R 777 /app/data
 
 # Set working directory
 WORKDIR /app

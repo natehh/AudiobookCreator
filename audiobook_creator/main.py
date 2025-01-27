@@ -5,6 +5,7 @@ from .api.routes import AudiobookAPI
 from .api.auth.routes import auth_router
 from .api.auth.tokens import JWTHandler
 from dotenv import load_dotenv
+from .core.database import initialize_db
 
 # Load environment variables
 load_dotenv()
@@ -12,6 +13,9 @@ load_dotenv()
 # Initialize the main FastAPI application
 api = AudiobookAPI()
 app = api.app
+
+# Initialize database
+initialize_db()
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
