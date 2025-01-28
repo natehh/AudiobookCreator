@@ -120,11 +120,17 @@
                 const response = await fetch(`${API_URL}/convert/`, {
                     method: 'POST',
                     body: formData,
-                    credentials: "include"
+                    credentials: 'include'
                 });
 
                 if (!response.ok) {
-                    throw new Error('Conversion failed to start');
+                    const errorData = await response.json();
+                    console.error('Response error:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorData
+                    });
+                    throw new Error(`Conversion failed: ${errorData.detail || response.statusText}`);
                 }
 
                 const data = await response.json();
@@ -132,6 +138,7 @@
                 window.location.href = `/conversion/${currentConversionId}`;
                 
             } catch (error) {
+                console.error('Request error:', error);
                 errorText.textContent = `Error: ${error.message}`;
             }
         }

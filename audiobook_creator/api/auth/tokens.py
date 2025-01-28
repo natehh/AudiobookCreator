@@ -36,6 +36,19 @@ class JWTBearer(HTTPBearer):
         super(JWTBearer, self).__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request):
+        # First try to get token from cookie
+        token = request.cookies.get("access_token")
+        
+        if token:
+            # Remove 'Bearer ' if it exists in the cookie
+            if token.startswith("Bearer "):
+                token = token.replace("Bearer ", "")
+                
+            if not JWTHandler.verify_token(token):
+                raise HTTPException(status_code=403, detail="Invalid token or expired token")
+            return token
+            
+        # If no cookie, try the Authorization header
         credentials = await super(JWTBearer, self).__call__(request)
         if credentials:
             if not credentials.scheme == "Bearer":
