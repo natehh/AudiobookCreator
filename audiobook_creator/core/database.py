@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +18,18 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     oauth_provider = Column(String)
     provider_id = Column(String)
+    conversions = relationship("Conversion", back_populates="user")
+
+class Conversion(Base):
+    __tablename__ = "conversions"
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String)
+    author = Column(String)
+    input_size = Column(Integer)
+    status = Column(String)
+    progress = Column(Float)
+    user = relationship("User", back_populates="conversions")
 
 def get_or_create_user(db, user_info):
     """Get user by email or create a new one."""

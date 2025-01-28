@@ -9,8 +9,11 @@ from pathlib import Path
 from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
 from .models import ConversionStatus
-from zipfile import ZipFile
-import tempfile
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from ..core.database import get_db, Conversion, get_or_create_user
+from ..utils.ebook import get_book_metadata
+from .auth.tokens import JWTBearer, JWTHandler
 
 class AudiobookAPI:
     """FastAPI application for audiobook conversion."""
@@ -60,7 +63,9 @@ class AudiobookAPI:
         async def create_conversion(
             background_tasks: BackgroundTasks,
             file: UploadFile,
-            output_dir: str = "output"
+            token: str = Depends(JWTBearer()),
+            output_dir: str = "output",
+            db: Session = Depends(get_db)
         ):
             if not file.filename.endswith(('.epub', '.mobi', '.txt')):
                 raise HTTPException(400, "Unsupported file format")
@@ -78,6 +83,30 @@ class AudiobookAPI:
                 temp_file=temp_path
             )
             self.store.add(status)
+
+            # Get user email from token
+            user_email = JWTHandler.verify_token(token)
+            
+            # Get or create the user
+            user_info = {"email": user_email}
+            user = get_or_create_user(db, user_info)
+            
+            # Get book metadata
+            book_metadata = get_book_metadata(Path(temp_path))
+            
+            # Create a new conversion record
+            conversion = Conversion(
+                id=converter.conversion_id,
+                user_id=user.id,
+                title=book_metadata["title"],
+                author=book_metadata["author"],
+                input_size=os.path.getsize(temp_path),
+                status="processing",
+                progress=0.0
+            )
+            db.add(conversion)
+            db.commit()
+            db.refresh(conversion)
             
             background_tasks.add_task(converter.convert)
             

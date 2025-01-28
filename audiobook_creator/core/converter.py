@@ -11,6 +11,8 @@ from pydub import AudioSegment
 from mutagen.mp4 import MP4
 import edge_tts
 import aiofiles
+from sqlalchemy.orm import Session
+from ..core.database import get_db, Conversion
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -37,9 +39,10 @@ class AudiobookConverter:
                 os.remove(self.file_path)
             except OSError as e:
                 logger.error(f"Error cleaning up {self.file_path}: {e}")
-        
+
     async def convert(self):
         """Convert ebook to audiobook chapters."""
+        db = next(get_db())  # Get a database session
         try:
             setup_nltk()
             book_title = get_book_title(Path(self.file_path))
@@ -65,12 +68,25 @@ class AudiobookConverter:
                 processed_chars += len(content)
                 logger.info(f"Completed chapter {i}")
 
+                # Update progress in the database
+                progress = processed_chars / total_chars
+                db.query(Conversion).filter(Conversion.id == self.conversion_id).update(
+                    {"progress": progress}
+                )
+                db.commit()
+
             final_file = self._create_m4b(book_dir, book_title, chapter_files)
             self.store.update(
                 self.conversion_id,
                 output_files=[final_file],
                 status="completed",
             )
+
+            # Update status in the database
+            db.query(Conversion).filter(Conversion.id == self.conversion_id).update(
+                {"status": "completed"}
+            )
+            db.commit()
             
         except Exception as e:
             logger.error(f"Conversion error: {str(e)}", exc_info=True)
@@ -79,9 +95,17 @@ class AudiobookConverter:
                 status="failed",
                 error=str(e)
             )
+
+            # Update status in the database
+            db.query(Conversion).filter(Conversion.id == self.conversion_id).update(
+                {"status": "failed"}
+            )
+            db.commit()
             raise
         finally:
             await self.cleanup()
+            db.close()
+
 
     async def _process_single_chapter(self, chapter_num, title, content, book_dir, processed_chars, total_chars):
         """Process a single chapter and save as MP3."""

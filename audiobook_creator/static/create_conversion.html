@@ -119,7 +119,8 @@
             try {
                 const response = await fetch(`${API_URL}/convert/`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    credentials: "include"
                 });
 
                 if (!response.ok) {
