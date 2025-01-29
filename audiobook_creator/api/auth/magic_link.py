@@ -10,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 import os
 from sqlalchemy.exc import SQLAlchemyError
 import logging
+from .tokens import JWTHandler
+from ...core.database import get_or_create_user
 
 Base = declarative_base()
 
@@ -23,7 +25,7 @@ class MagicLink(Base):
 def create_magic_link(email: str, db: Session) -> str:
     try:
         # Generate a secure token
-        token = secrets.token_urlsafe(32)
+        token = JWTHandler.create_access_token({"sub": email})
         expires_at = datetime.utcnow() + timedelta(minutes=15)
         
         # Store the magic link
@@ -100,3 +102,11 @@ def verify_magic_link(token: str, db: Session) -> str:
     db.commit()
     
     return email
+
+def create_user_from_magic_link(email: str, db):
+    user_info = {
+        "email": email,
+        "oauth_provider": "email",
+        "id": None
+    }
+    return get_or_create_user(db, user_info)

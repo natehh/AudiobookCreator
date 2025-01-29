@@ -37,7 +37,7 @@ def get_or_create_user(db, user_info):
     if not user:
         user = User(
             email=user_info["email"],
-            oauth_provider="google",
+            oauth_provider=user_info["oauth_provider"],
             provider_id=user_info["id"]
         )
         db.add(user)

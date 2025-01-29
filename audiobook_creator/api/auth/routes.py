@@ -4,9 +4,13 @@ from ...core.database import get_db
 from .google_oauth import get_google_auth_url, handle_google_callback
 from .tokens import JWTHandler
 from fastapi.responses import JSONResponse
-from .magic_link import create_magic_link, verify_magic_link
+from .magic_link import create_magic_link, verify_magic_link, create_user_from_magic_link
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 auth_router = APIRouter()
@@ -54,6 +58,7 @@ async def request_magic_link(request: MagicLinkRequest, db: Session = Depends(ge
 @auth_router.get("/verify-magic-link")
 async def verify_magic_link_route(token: str, db: Session = Depends(get_db)):
     email = verify_magic_link(token, db)
+    user = create_user_from_magic_link(email, db)
     jwt_token = JWTHandler.create_access_token({"sub": email})
     
     response = RedirectResponse(url="/static/create_conversion.html")

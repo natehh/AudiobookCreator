@@ -40,6 +40,7 @@ def handle_google_callback(code: str, db):
     tokens = response.json()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     user_info = requests.get(GOOGLE_USER_INFO_URL, headers=headers).json()
+    user_info["oauth_provider"] = "google"
     
     if "email" not in user_info:
         raise HTTPException(status_code=400, detail="Failed to fetch user information")
