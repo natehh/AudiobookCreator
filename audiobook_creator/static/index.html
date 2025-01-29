@@ -162,6 +162,17 @@
             background-color: #f44336;
         }
 
+        .signup-box.highlight {
+            box-shadow: 0 0 0 2px #ff6b6b;
+            animation: pulse 1.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -179,7 +190,7 @@
         <a href="/" class="logo">Audiobook Creator</a>
         <div class="nav-buttons">
             <a href="/pricing" class="nav-button">Pricing</a>
-            <a href="/login" class="nav-button">Log in</a>
+            <a href="#" class="nav-button" onclick="highlightSignup(event)">Log in</a>
             <a href="/auth/login/google" class="nav-button primary-button">Get Started</a>
         </div>
     </nav>
@@ -260,6 +271,23 @@
             setTimeout(() => {
                 messageDiv.style.display = 'none';
             }, 5000);
+        }
+
+        function highlightSignup(event) {
+            event.preventDefault();
+            const signupBox = document.querySelector('.signup-box');
+            const emailInput = document.getElementById('emailInput');
+            
+            signupBox.classList.add('highlight');
+            emailInput.focus();
+            
+            // Remove highlight after animation
+            setTimeout(() => {
+                signupBox.classList.remove('highlight');
+            }, 1500);
+            
+            // Scroll signup box into view if needed
+            signupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     </script>
 </body>
