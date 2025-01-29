@@ -24,7 +24,6 @@ async def auth_middleware(request: Request, call_next):
         "/static/index.html",
         "/auth/login/google",
         "/auth/callback/google",
-        "/auth/request-magic-link",
         "/favicon.ico"
     ]
     
