@@ -69,7 +69,7 @@ def send_magic_link(email: str, token: str):
         message = MIMEMultipart()
         message["From"] = sender_email
         message["To"] = email
-        message["Subject"] = "Your Magic Link"
+        message["Subject"] = "Your Signup Link for AudiobookCreator"
         
         link = f"{os.getenv('APP_URL')}/auth/verify-magic-link?token={token}"
         body = f"Click this link to sign in: {link}\nThis link will expire in 15 minutes."
