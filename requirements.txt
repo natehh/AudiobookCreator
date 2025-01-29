@@ -17,3 +17,4 @@ requests
 python-dotenv
 python-jose[cryptography]
 python-multipart
+pydantic[email]

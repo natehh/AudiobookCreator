@@ -4,8 +4,14 @@ from ...core.database import get_db
 from .google_oauth import get_google_auth_url, handle_google_callback
 from .tokens import JWTHandler
 from fastapi.responses import JSONResponse
+from .magic_link import create_magic_link, verify_magic_link
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, EmailStr
+
 
 auth_router = APIRouter()
+class MagicLinkRequest(BaseModel):
+    email: EmailStr
 
 @auth_router.get("/login/google")
 def login_google():
@@ -36,3 +42,27 @@ def auth_callback(code: str, db=Depends(get_db)):
 async def verify_auth(token: str = Depends(JWTHandler.verify_token)):
     """Verify authentication status."""
     return JSONResponse({"authenticated": True})
+
+@auth_router.post("/request-magic-link")
+async def request_magic_link(request: MagicLinkRequest, db: Session = Depends(get_db)):
+    try:
+        create_magic_link(request.email, db)
+        return {"message": "Magic link sent successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to send magic link")
+
+@auth_router.get("/verify-magic-link")
+async def verify_magic_link_route(token: str, db: Session = Depends(get_db)):
+    email = verify_magic_link(token, db)
+    jwt_token = JWTHandler.create_access_token({"sub": email})
+    
+    response = RedirectResponse(url="/static/create_conversion.html")
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {jwt_token}",
+        httponly=True,
+        max_age=3600,
+        secure=True,
+        samesite="lax"
+    )
+    return response
