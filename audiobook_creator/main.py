@@ -24,10 +24,16 @@ async def auth_middleware(request: Request, call_next):
         "/static/index.html",
         "/auth/login/google",
         "/auth/callback/google",
-        "/favicon.ico"
+        "/favicon.ico",
+        "/demo-voices",
     ]
     
+    # Check exact matches first
     if request.url.path in public_paths:
+        return await call_next(request)
+    
+    # Check path patterns
+    if request.url.path.startswith("/static/demo_files/"):
         return await call_next(request)
     
     # Check for authentication

@@ -14,6 +14,10 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion, get_or_create_user
 from ..utils.ebook import get_book_metadata
 from .auth.tokens import JWTBearer, JWTHandler
+import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AudiobookAPI:
     """FastAPI application for audiobook conversion."""
@@ -154,3 +158,42 @@ class AudiobookAPI:
                 filename=output_file.name,
                 media_type="audio/mpeg"
             )
+
+        @self.app.get("/demo-voices")
+        async def get_demo_voices():
+            """Get list of available demo voices."""
+            demo_dir = Path(__file__).parent.parent / "static" / "demo_files"
+            voices = []
+            try:
+                for file in demo_dir.glob("*.mp3"):
+                    # Extract name and country from filename (e.g., "en-US-JennyNeural.mp3")
+                    match = re.match(r'en-(\w+)-(\w+)Neural\.mp3', file.name)
+                    if match:
+                        country = match.group(1)
+                        name = match.group(2)
+                        voices.append({
+                            "file": file.name,
+                            "name": name,
+                            "country": country
+                        })
+                return sorted(voices, key=lambda x: (x["country"], x["name"]))
+            except Exception as e:
+                logger.error(f"Error listing demo voices: {str(e)}")
+                raise HTTPException(500, "Error listing demo voices")
+
+        # @self.app.get("/static/demo_files/{filename}")
+        # async def serve_demo_file(filename: str):
+        #     """Serve demo audio files."""
+        #     demo_dir = Path(__file__).parent.parent / "static" / "demo_files"
+        #     file_path = demo_dir / filename
+            
+        #     if not file_path.exists():
+        #         logger.error(f"Demo file not found: {file_path}")
+        #         raise HTTPException(404, "Demo file not found")
+                
+        #     logger.info(f"Serving demo file: {file_path}")
+        #     return FileResponse(
+        #         path=file_path,
+        #         media_type="audio/mpeg",
+        #         filename=filename
+        #     )

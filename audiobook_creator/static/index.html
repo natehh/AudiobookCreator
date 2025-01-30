@@ -183,6 +183,64 @@
                 opacity: 1;
             }
         }
+        .demo-section {
+            margin: 3rem auto;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .demo-section h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        .demo-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #eee;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .demo-controls {
+            text-align: center;
+        }
+
+        .voice-select {
+            width: 100%;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+        }
+
+        .demo-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 24px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .demo-button:hover {
+            background: #ff5252;
+        }
+
+        .demo-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -213,6 +271,23 @@
                     </svg>
                     Continue with Google
                 </a>
+            </div>
+
+            <div class="demo-section">
+                <h2>Try it now</h2>
+                <div class="demo-player">
+                    <select id="voiceSelect" class="voice-select">
+                        <option value="">Select a voice</option>
+                    </select>
+                    <div class="demo-text">
+                        <p id="demoText">Space exploration represents one of humanity's greatest achievements. Since the launch of Sputnik 1 in 1957, we have made tremendous strides in understanding our cosmic neighborhood.</p>
+                    </div>
+                    <div class="demo-controls">
+                        <button onclick="playDemo()" id="playButton" class="demo-button">
+                            ▶ Play Sample
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="features">
@@ -289,6 +364,67 @@
             // Scroll signup box into view if needed
             signupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        let audioContext;
+        let currentAudio;
+        
+        async function loadVoices() {
+            const select = document.getElementById('voiceSelect');
+            
+            try {
+                const response = await fetch('/demo-voices');
+                const voices = await response.json();
+                
+                voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.file;
+                    option.textContent = `${voice.name} (${voice.country})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading voices:', error);
+                showMessage('Error loading voices', 'error');
+            }
+        }
+
+        async function playDemo() {
+            const button = document.getElementById('playButton');
+            const select = document.getElementById('voiceSelect');
+            
+            if (!select.value) {
+                showMessage('Please select a voice first', 'error');
+                return;
+            }
+            
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                button.textContent = '▶ Play Sample';
+                return;
+            }
+            
+            button.disabled = true;
+            button.textContent = 'Loading...';
+            
+            try {
+                currentAudio = new Audio(`/static/demo_files/${select.value}`);
+                await currentAudio.play();
+                button.textContent = '⏸ Pause';
+                button.disabled = false;
+                
+                currentAudio.onended = () => {
+                    button.textContent = '▶ Play Sample';
+                    currentAudio = null;
+                };
+            } catch (error) {
+                console.error('Error playing audio:', error);
+                button.textContent = '▶ Play Sample';
+                button.disabled = false;
+                showMessage('Error playing audio', 'error');
+            }
+        }
+
+        // Load voices when page loads
+        document.addEventListener('DOMContentLoaded', loadVoices);
     </script>
 </body>
 </html>
