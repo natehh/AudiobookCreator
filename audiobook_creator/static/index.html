@@ -38,12 +38,30 @@
         .nav-buttons {
             display: flex;
             gap: 1rem;
+            align-items: center;
         }
 
         .nav-button {
-            padding: 0.5rem 1rem;
+            padding: 0.8rem 1.5rem;
             text-decoration: none;
             color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .nav-button.active {
+            background: #ff6b6b;
+        }
+
+        .nav-button.active:hover {
+            background: #ff5252;
         }
 
         .primary-button {
