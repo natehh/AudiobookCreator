@@ -67,6 +67,14 @@
     </style>
 </head>
 <body>
+    <nav>
+        <a href="/" class="logo">Audiobook Creator</a>
+        <div class="nav-buttons">
+            <a href="/static/create_conversion.html" class="nav-button">Create</a>
+            <a href="/static/account.html" class="nav-button">Account</a>
+            <a href="#" class="nav-button" onclick="logout()">Logout</a>
+        </div>
+    </nav>
     <div class="container">
         <h1>Conversion Progress</h1>
         <div class="progress-bar">
@@ -119,6 +127,18 @@
         }
 
         startWebSocketConnection(conversionId);
+
+        async function logout() {
+            try {
+                await fetch('/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '/static/index.html';
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
     </script>
 </body>
 </html>

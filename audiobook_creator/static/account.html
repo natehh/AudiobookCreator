@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings - Audiobook Creator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: white;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-button {
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .account-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ccc;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            box-sizing: border-box;
+            margin-bottom: 0.5rem;
+        }
+
+        .button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 24px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background: #ff5252;
+        }
+
+        .button.danger {
+            background: #dc3545;
+        }
+
+        .button.danger:hover {
+            background: #c82333;
+        }
+
+        .conversions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .conversion-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+
+        .conversion-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .conversion-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .status-completed {
+            background: #28a745;
+        }
+
+        .status-processing {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-failed {
+            background: #dc3545;
+        }
+
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 8px;
+            color: white;
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+            display: none;
+        }
+
+        .message.success {
+            background-color: #4CAF50;
+        }
+
+        .message.error {
+            background-color: #f44336;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">Audiobook Creator</a>
+        <div class="nav-buttons">
+            <a href="/static/create_conversion.html" class="nav-button">Create</a>
+            <a href="/static/account.html" class="nav-button">Account</a>
+            <a href="#" class="nav-button" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="account-section">
+            <h2 class="section-title">Account Information</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="name" class="form-input">
+            </div>
+            <button onclick="updateAccount()" class="button">Save Changes</button>
+        </div>
+
+        <div class="account-section">
+            <h2 class="section-title">Billing Information</h2>
+            <div class="form-group">
+                <label>Current Plan</label>
+                <input type="text" id="currentPlan" class="form-input" readonly>
+            </div>
+            <button onclick="manageBilling()" class="button">Manage Billing</button>
+        </div>
+
+        <div class="account-section">
+            <h2 class="section-title">Your Conversions</h2>
+            <div class="conversions-grid" id="conversionsGrid">
+                <!-- Conversions will be populated here -->
+            </div>
+        </div>
+
+        <div class="account-section">
+            <h2 class="section-title">Delete Account</h2>
+            <p style="color: #ff6b6b;">Warning: This action cannot be undone.</p>
+            <button onclick="confirmDeleteAccount()" class="button danger">Delete Account</button>
+        </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <script>
+        async function loadAccountInfo() {
+            try {
+                const response = await fetch('/api/account', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                document.getElementById('email').value = data.email;
+                document.getElementById('name').value = data.name || '';
+                document.getElementById('currentPlan').value = data.plan || 'Free';
+            } catch (error) {
+                showMessage('Error loading account information', 'error');
+            }
+        }
+
+        async function loadConversions() {
+            try {
+                const response = await fetch('/api/conversions', {
+                    credentials: 'include'
+                });
+                const conversions = await response.json();
+                
+                const grid = document.getElementById('conversionsGrid');
+                grid.innerHTML = conversions.map(conv => `
+                    <div class="conversion-card">
+                        <h3>${conv.title}</h3>
+                        <p>Author: ${conv.author}</p>
+                        <div class="conversion-status status-${conv.status.toLowerCase()}">
+                            ${conv.status}
+                        </div>
+                        ${conv.status === 'completed' ? 
+                            `<button onclick="downloadConversion('${conv.id}')" class="button">Download</button>` : 
+                            ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Error loading conversions', 'error');
+            }
+        }
+
+        async function updateAccount() {
+            const name = document.getElementById('name').value;
+            
+            try {
+                const response = await fetch('/api/account', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ name })
+                });
+                
+                if (response.ok) {
+                    showMessage('Account updated successfully', 'success');
+                } else {
+                    throw new Error('Failed to update account');
+                }
+            } catch (error) {
+                showMessage('Error updating account', 'error');
+            }
+        }
+
+        function manageBilling() {
+            window.location.href = '/static/billing.html';
+        }
+
+        async function downloadConversion(id) {
+            window.location.href = `/download/${id}`;
+        }
+
+        async function confirmDeleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                try {
+                    const response = await fetch('/api/account', {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        window.location.href = '/static/index.html';
+                    } else {
+                        throw new Error('Failed to delete account');
+                    }
+                } catch (error) {
+                    showMessage('Error deleting account', 'error');
+                }
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '/static/index.html';
+            } catch (error) {
+                showMessage('Error logging out', 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAccountInfo();
+            loadConversions();
+        });
+    </script>
+</body>
+</html> 

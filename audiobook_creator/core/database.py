@@ -1,7 +1,8 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, Session
 import logging
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,10 +15,12 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
+    
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, nullable=False)
+    name = Column(String)
     oauth_provider = Column(String)
-    provider_id = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
     conversions = relationship("Conversion", back_populates="user")
 
 class Conversion(Base):
@@ -29,20 +32,23 @@ class Conversion(Base):
     input_size = Column(Integer)
     status = Column(String)
     progress = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User", back_populates="conversions")
 
-def get_or_create_user(db, user_info):
-    """Get user by email or create a new one."""
+def get_or_create_user(db: Session, user_info: dict) -> User:
+    """Get existing user or create a new one."""
     user = db.query(User).filter(User.email == user_info["email"]).first()
+    
     if not user:
         user = User(
             email=user_info["email"],
-            oauth_provider=user_info["oauth_provider"],
-            provider_id=user_info["id"]
+            name=user_info.get("name"),
+            oauth_provider="google"
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+    
     return user
 
 def get_db():
@@ -56,3 +62,6 @@ def initialize_db():
     logger.info("Creating database and tables...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database and tables created.")
+
+def init_db(engine):
+    Base.metadata.create_all(bind=engine)

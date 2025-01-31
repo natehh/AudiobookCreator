@@ -71,3 +71,15 @@ async def verify_magic_link_route(token: str, db: Session = Depends(get_db)):
         samesite="lax"
     )
     return response
+
+@auth_router.post("/logout")
+async def logout():
+    """Handle user logout."""
+    response = JSONResponse({"message": "Logged out successfully"})
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+    return response

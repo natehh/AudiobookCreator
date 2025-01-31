@@ -6,9 +6,20 @@ from .api.auth.routes import auth_router
 from .api.auth.tokens import JWTHandler
 from dotenv import load_dotenv
 from .core.database import initialize_db
+from .api.account.routes import account_router
+from .core.migrations import run_migrations
+import os
 
 # Load environment variables
 load_dotenv()
+
+# Get database URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+# Run migrations
+run_migrations(DATABASE_URL)
 
 # Initialize the main FastAPI application
 api = AudiobookAPI()
@@ -57,6 +68,9 @@ app.mount("/static", StaticFiles(directory="audiobook_creator/static"), name="st
 
 # Include the auth router
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+# Include the account router
+app.include_router(account_router, prefix="/api", tags=["account"])
 
 # Root redirect - for authenticated users will be redirected to create_conversion.html
 # by the middleware, for unauthenticated users will be redirected to index.html
