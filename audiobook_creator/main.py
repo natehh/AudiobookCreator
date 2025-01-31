@@ -7,19 +7,10 @@ from .api.auth.tokens import JWTHandler
 from dotenv import load_dotenv
 from .core.database import initialize_db
 from .api.account.routes import account_router
-from .core.migrations import run_migrations
 import os
 
 # Load environment variables
 load_dotenv()
-
-# Get database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set")
-
-# Run migrations
-run_migrations(DATABASE_URL)
 
 # Initialize the main FastAPI application
 api = AudiobookAPI()
