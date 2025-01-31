@@ -162,38 +162,32 @@ class AudiobookAPI:
         @self.app.get("/demo-voices")
         async def get_demo_voices():
             """Get list of available demo voices."""
+            # Cache the results using FastAPI's caching mechanisms or store in memory
+            if hasattr(self, '_cached_voices') and self._cached_voices:
+                return self._cached_voices
+
             demo_dir = Path(__file__).parent.parent / "static" / "demo_files"
             voices = []
             try:
-                for file in demo_dir.glob("*.mp3"):
-                    # Extract name and country from filename (e.g., "en-US-JennyNeural.mp3")
-                    match = re.match(r'en-(\w+)-(\w+)Neural\.mp3', file.name)
-                    if match:
-                        country = match.group(1)
-                        name = match.group(2)
-                        voices.append({
-                            "file": file.name,
-                            "name": name,
-                            "country": country
-                        })
-                return sorted(voices, key=lambda x: (x["country"], x["name"]))
+                # Pre-compile the regex pattern
+                pattern = re.compile(r'en-(\w+)-(\w+)Neural\.mp3')
+                
+                # Use a list comprehension for better performance
+                voices = [
+                    {
+                        "file": file.name,
+                        "name": match.group(2),
+                        "country": match.group(1),
+                        "url": f"/static/demo_files/{file.name}"  # Add direct URL
+                    }
+                    for file in demo_dir.glob("*.mp3")
+                    if (match := pattern.match(file.name))
+                ]
+                
+                # Sort and cache the results
+                self._cached_voices = sorted(voices, key=lambda x: (x["country"], x["name"]))
+                return self._cached_voices
+                
             except Exception as e:
                 logger.error(f"Error listing demo voices: {str(e)}")
                 raise HTTPException(500, "Error listing demo voices")
-
-        # @self.app.get("/static/demo_files/{filename}")
-        # async def serve_demo_file(filename: str):
-        #     """Serve demo audio files."""
-        #     demo_dir = Path(__file__).parent.parent / "static" / "demo_files"
-        #     file_path = demo_dir / filename
-            
-        #     if not file_path.exists():
-        #         logger.error(f"Demo file not found: {file_path}")
-        #         raise HTTPException(404, "Demo file not found")
-                
-        #     logger.info(f"Serving demo file: {file_path}")
-        #     return FileResponse(
-        #         path=file_path,
-        #         media_type="audio/mpeg",
-        #         filename=filename
-        #     )
