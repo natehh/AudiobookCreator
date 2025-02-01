@@ -7,6 +7,7 @@ from .api.auth.tokens import JWTHandler
 from dotenv import load_dotenv
 from .core.database import initialize_db
 from .api.account.routes import account_router
+from .api.pricing.routes import pricing_router
 import os
 
 # Load environment variables
@@ -30,6 +31,8 @@ async def auth_middleware(request: Request, call_next):
         "/auth/verify-magic-link",
         "/favicon.ico",
         "/demo-voices",
+        "/static/pricing.html",
+        "/api/pricing/voices",
     ]
     
     # Check exact matches first
@@ -71,6 +74,9 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 # Include the account router
 app.include_router(account_router, prefix="/api", tags=["account"])
+
+# Include the pricing router
+app.include_router(pricing_router, prefix="/api", tags=["pricing"])
 
 # Root redirect - for authenticated users will be redirected to create_conversion
 # by the middleware, for unauthenticated users will be redirected to index.html

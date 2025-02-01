@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pricing</title>
+    <title>Pricing - Audiobook Creator</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -41,13 +41,128 @@
         }
 
         .nav-button {
-            padding: 0.5rem 1rem;
+            padding: 0.8rem 1.5rem;
             text-decoration: none;
             color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
 
-        .primary-button {
-            background-color: #ff6b6b;
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .nav-button.active {
+            background: #ff6b6b;
+        }
+
+        .pricing-header {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .pricing-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .pricing-header p {
+            color: #ccc;
+            font-size: 1.2rem;
+        }
+
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 2rem 0;
+        }
+
+        .voice-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s;
+        }
+
+        .voice-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .voice-name {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .voice-details {
+            color: #ccc;
+            margin-bottom: 1rem;
+        }
+
+        .voice-price {
+            font-size: 1.5rem;
+            color: #ff6b6b;
+            margin-bottom: 1rem;
+        }
+
+        .voice-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .voice-features li {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .voice-features li::before {
+            content: "✓";
+            color: #4CAF50;
+        }
+
+        .try-button {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 24px;
+            text-decoration: none;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .try-button:hover {
+            background: #ff5252;
+        }
+
+        .country-filter {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .country-button {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .country-button.active {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
         }
     </style>
 </head>
@@ -55,12 +170,83 @@
     <nav>
         <a href="/" class="logo">Audiobook Creator</a>
         <div class="nav-buttons">
-            <a href="/pricing" class="nav-button">Pricing</a>
-            <a href="/login" class="nav-button primary-button">Login</a>
+            <a href="/static/pricing.html" class="nav-button active">Pricing</a>
+            <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
         </div>
     </nav>
+
     <div class="container">
-        <h1>Pricing</h1>
+        <div class="pricing-header">
+            <h1>Voice Pricing</h1>
+            <p>Choose from our selection of high-quality AI voices</p>
+        </div>
+
+        <div class="country-filter" id="countryFilter">
+            <!-- Will be populated by JavaScript -->
+        </div>
+
+        <div class="voice-grid" id="voiceGrid">
+            <!-- Will be populated by JavaScript -->
+        </div>
     </div>
+
+    <script>
+        async function loadVoicePricing() {
+            try {
+                const response = await fetch('/api/pricing/voices');
+                const voices = await response.json();
+                
+                // Populate country filter
+                const countries = [...new Set(voices.map(voice => voice.country))];
+                const filterContainer = document.getElementById('countryFilter');
+                filterContainer.innerHTML = `
+                    <button class="country-button active" data-country="all">All Countries</button>
+                    ${countries.map(country => 
+                        `<button class="country-button" data-country="${country}">${country}</button>`
+                    ).join('')}
+                `;
+
+                // Initial render
+                renderVoices(voices);
+
+                // Add filter functionality
+                document.querySelectorAll('.country-button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        document.querySelectorAll('.country-button').forEach(b => b.classList.remove('active'));
+                        button.classList.add('active');
+                        const country = button.dataset.country;
+                        const filtered = country === 'all' ? voices : voices.filter(v => v.country === country);
+                        renderVoices(filtered);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading voice pricing:', error);
+            }
+        }
+
+        function renderVoices(voices) {
+            const grid = document.getElementById('voiceGrid');
+            grid.innerHTML = voices.map(voice => `
+                <div class="voice-card">
+                    <div class="voice-name">${voice.name}</div>
+                    <div class="voice-details">${voice.country} · ${voice.language}</div>
+                    <div class="voice-price">$${voice.price_per_char.toFixed(4)} per character</div>
+                    <ul class="voice-features">
+                        <li>Neural voice technology</li>
+                        <li>${voice.gender} voice</li>
+                        <li>${voice.description || 'Professional quality'}</li>
+                    </ul>
+                    <a href="#" class="try-button" onclick="redirectToLogin()">Try this voice</a>
+                </div>
+            `).join('');
+        }
+
+        function redirectToLogin() {
+            window.location.href = '/static/index.html#signup';
+        }
+
+        // Load pricing when page loads
+        document.addEventListener('DOMContentLoaded', loadVoicePricing);
+    </script>
 </body>
 </html>
