@@ -13,20 +13,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 class JWTHandler:
     @staticmethod
-    def create_access_token(data: dict):
+    def create_access_token(data: dict, expires_delta: int = ACCESS_TOKEN_EXPIRE_MINUTES):
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.utcnow() + timedelta(minutes=expires_delta)
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
     @staticmethod
-    def verify_token(token: str):
+    def verify_token(token: str, check_type: str = None):
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             email: str = payload.get("sub")
             if email is None:
                 raise HTTPException(status_code=401, detail="Invalid authentication token")
+            
+            # If type checking is requested, verify the token type
+            if check_type and payload.get("type") != check_type:
+                raise HTTPException(status_code=401, detail="Invalid token type")
+            
             return email
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid authentication token")

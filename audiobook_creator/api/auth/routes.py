@@ -57,20 +57,24 @@ async def request_magic_link(request: MagicLinkRequest, db: Session = Depends(ge
 
 @auth_router.get("/verify-magic-link")
 async def verify_magic_link_route(token: str, db: Session = Depends(get_db)):
-    email = verify_magic_link(token, db)
-    user = create_user_from_magic_link(email, db)
-    jwt_token = JWTHandler.create_access_token({"sub": email})
-    
-    response = RedirectResponse(url="/static/create_conversion.html")
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {jwt_token}",
-        httponly=True,
-        max_age=3600,
-        secure=True,
-        samesite="lax"
-    )
-    return response
+    try:
+        email = verify_magic_link(token, db)
+        # Create a regular access token (not a magic link token)
+        jwt_token = JWTHandler.create_access_token({"sub": email})
+        
+        response = RedirectResponse(url="/static/create_conversion.html")
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {jwt_token}",
+            httponly=True,
+            max_age=3600,
+            secure=True,
+            samesite="lax"
+        )
+        return response
+    except Exception as e:
+        logging.error(f"Magic link route error: {str(e)}")
+        return RedirectResponse(url="/static/index.html")
 
 @auth_router.post("/logout")
 async def logout():

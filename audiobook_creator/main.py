@@ -26,6 +26,8 @@ async def auth_middleware(request: Request, call_next):
         "/static/index.html",
         "/auth/login/google",
         "/auth/callback/google",
+        "/auth/request-magic-link",
+        "/auth/verify-magic-link",
         "/favicon.ico",
         "/demo-voices",
     ]
@@ -41,12 +43,19 @@ async def auth_middleware(request: Request, call_next):
     # Check for authentication
     token = request.cookies.get("access_token")
     if not token or not token.startswith("Bearer "):
-        return RedirectResponse("/static/index.html")
+        # Only redirect GET requests to index.html
+        if request.method == "GET":
+            return RedirectResponse("/static/index.html")
+        else:
+            raise HTTPException(status_code=401, detail="Authentication required")
     
     try:
         JWTHandler.verify_token(token.split(" ")[1])
     except HTTPException:
-        return RedirectResponse("/static/index.html")
+        if request.method == "GET":
+            return RedirectResponse("/static/index.html")
+        else:
+            raise HTTPException(status_code=401, detail="Invalid authentication")
     
     # If authenticated and trying to access root, redirect to create_conversion
     if request.url.path == "/":
@@ -63,7 +72,7 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 # Include the account router
 app.include_router(account_router, prefix="/api", tags=["account"])
 
-# Root redirect - for authenticated users will be redirected to create_conversion.html
+# Root redirect - for authenticated users will be redirected to create_conversion
 # by the middleware, for unauthenticated users will be redirected to index.html
 @app.get("/")
 async def root():
