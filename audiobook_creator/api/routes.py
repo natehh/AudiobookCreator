@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -9,9 +9,8 @@ from pathlib import Path
 from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
 from .models import ConversionStatus
-from fastapi import Depends
 from sqlalchemy.orm import Session
-from ..core.database import get_db, Conversion, get_or_create_user
+from ..core.database import get_db, Conversion, get_or_create_user, User
 from ..utils.ebook import get_book_metadata
 from .auth.tokens import JWTBearer, JWTHandler
 import re
@@ -191,3 +190,34 @@ class AudiobookAPI:
             except Exception as e:
                 logger.error(f"Error listing demo voices: {str(e)}")
                 raise HTTPException(500, "Error listing demo voices")
+
+        @self.app.get("/api/conversions/{conversion_id}")
+        async def get_conversion(
+            conversion_id: str,
+            token: str = Depends(JWTBearer()),
+            db: Session = Depends(get_db)
+        ):
+            # Get user from token
+            email = JWTHandler.verify_token(token)
+            user = db.query(User).filter(User.email == email).first()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Get conversion from database
+            conversion = db.query(Conversion).filter(
+                Conversion.id == conversion_id,
+                Conversion.user_id == user.id
+            ).first()
+            
+            if not conversion:
+                raise HTTPException(status_code=404, detail="Conversion not found")
+            
+            return {
+                "id": conversion.id,
+                "title": conversion.title,
+                "author": conversion.author,
+                "status": conversion.status,
+                "progress": conversion.progress,
+                "created_at": conversion.created_at.isoformat()
+            }
