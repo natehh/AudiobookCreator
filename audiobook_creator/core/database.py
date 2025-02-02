@@ -43,16 +43,27 @@ class VoicePricing(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     country = Column(String, nullable=False)
-    source = Column(String, nullable=False, default='edge')
-    price_per_char = Column(Float, nullable=False)
+    source = Column(String, nullable=False)
+    tier_id = Column(Integer, ForeignKey("voice_tiers.id"), nullable=False)
     usage_count = Column(BigInteger, default=0)
     language = Column(String, nullable=False)
     gender = Column(String)  # Male/Female/Neutral
     description = Column(String)
-    is_neural = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    tier_info = relationship("VoiceTier", back_populates="voices")
+
+class VoiceTier(Base):
+    __tablename__ = "voice_tiers"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)  # e.g., "Basic", "Premium", "Enterprise"
+    price_per_char = Column(Float, nullable=False)
+    description = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    voices = relationship("VoicePricing", back_populates="tier_info")
 
 def get_or_create_user(db: Session, user_info: dict) -> User:
     """Get existing user or create a new one."""
@@ -70,6 +81,104 @@ def get_or_create_user(db: Session, user_info: dict) -> User:
     
     return user
 
+def populate_initial_tiers(db: Session):
+    """Populate initial voice tiers if they don't exist."""
+    try:
+        # Define initial tiers
+        initial_tiers = [
+            {
+                "name": "Basic",
+                "price_per_char": 0.000015,
+                "description": "High-quality voices for personal projects"
+            },
+            {
+                "name": "Premium",
+                "price_per_char": 0.000025,
+                "description": "Professional voices with enhanced clarity and natural intonation"
+            },
+            {
+                "name": "Enterprise",
+                "price_per_char": 0.000040,
+                "description": "Studio-quality voices with the highest fidelity and expression"
+            }
+        ]
+        
+        # Add tiers if they don't exist
+        for tier_data in initial_tiers:
+            existing_tier = db.query(VoiceTier).filter_by(name=tier_data["name"]).first()
+            if not existing_tier:
+                tier = VoiceTier(**tier_data)
+                db.add(tier)
+        
+        db.commit()
+        logger.info("Initial tiers populated successfully")
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error populating initial tiers: {str(e)}")
+        raise
+
+def populate_initial_voices(db: Session):
+    """Populate initial voices if they don't exist."""
+    try:
+        # Get tier IDs
+        tiers = {tier.name: tier.id for tier in db.query(VoiceTier).all()}
+        
+        # Define initial voices
+        initial_voices = [
+            {
+                "name": "Emma",
+                "country": "US",
+                "language": "English",
+                "source": "azure",
+                "tier_id": tiers["Premium"],
+                "gender": "Female",
+                "description": "Warm and professional American accent"
+            },
+            {
+                "name": "James",
+                "country": "UK",
+                "language": "English",
+                "source": "azure",
+                "tier_id": tiers["Premium"],
+                "gender": "Male",
+                "description": "Clear British accent"
+            },
+            {
+                "name": "Sarah",
+                "country": "Australia",
+                "language": "English",
+                "source": "azure",
+                "tier_id": tiers["Basic"],
+                "gender": "Female",
+                "description": "Friendly Australian accent"
+            },
+            {
+                "name": "Michael",
+                "country": "Canada",
+                "language": "English",
+                "source": "azure",
+                "tier_id": tiers["Enterprise"],
+                "gender": "Male",
+                "description": "Professional Canadian accent"
+            }
+        ]
+        
+        # Add voices if they don't exist
+        for voice_data in initial_voices:
+            existing_voice = db.query(VoicePricing).filter_by(name=voice_data["name"]).first()
+            if not existing_voice:
+                voice = VoicePricing(**voice_data)
+                db.add(voice)
+        
+        db.commit()
+        logger.info("Initial voices populated successfully")
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error populating initial voices: {str(e)}")
+        raise
+
 def initialize_db():
     """Initialize database connection and create tables if they don't exist."""
     database_url = os.getenv("SQLALCHEMY_DATABASE_URL", "sqlite:///audiobookcreator.db")
@@ -84,6 +193,15 @@ def initialize_db():
 
     # Create all tables
     Base.metadata.create_all(bind=engine)
+    
+    # Initialize session and populate tiers and voices
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    try:
+        populate_initial_tiers(db)
+        populate_initial_voices(db)
+    finally:
+        db.close()
     
     return engine
 

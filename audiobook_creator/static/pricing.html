@@ -164,6 +164,31 @@
             background: #ff6b6b;
             border-color: #ff6b6b;
         }
+
+        .tier-section {
+            margin-bottom: 4rem;
+        }
+
+        .tier-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tier-header h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tier-price {
+            font-size: 1.5rem;
+            color: #ff6b6b;
+            margin-bottom: 0.5rem;
+        }
+
+        .tier-description {
+            color: #ccc;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
@@ -226,17 +251,27 @@
 
         function renderVoices(voices) {
             const grid = document.getElementById('voiceGrid');
-            grid.innerHTML = voices.map(voice => `
-                <div class="voice-card">
-                    <div class="voice-name">${voice.name}</div>
-                    <div class="voice-details">${voice.country} · ${voice.language}</div>
-                    <div class="voice-price">$${voice.price_per_char.toFixed(4)} per character</div>
-                    <ul class="voice-features">
-                        <li>Neural voice technology</li>
-                        <li>${voice.gender} voice</li>
-                        <li>${voice.description || 'Professional quality'}</li>
-                    </ul>
-                    <a href="#" class="try-button" onclick="redirectToLogin()">Try this voice</a>
+            grid.innerHTML = voices.map(tier => `
+                <div class="tier-section">
+                    <div class="tier-header">
+                        <h2>${tier.tier_name}</h2>
+                        <div class="tier-price">$${tier.price_per_char.toFixed(4)} per character</div>
+                        <p class="tier-description">${tier.description}</p>
+                    </div>
+                    <div class="voice-grid">
+                        ${tier.voices.map(voice => `
+                            <div class="voice-card">
+                                <div class="voice-name">${voice.name}</div>
+                                <div class="voice-details">${voice.country} · ${voice.language}</div>
+                                <ul class="voice-features">
+                                    <li>Neural voice technology</li>
+                                    <li>${voice.gender} voice</li>
+                                    <li>${voice.description || 'Professional quality'}</li>
+                                </ul>
+                                <a href="#" class="try-button" onclick="redirectToLogin()">Try this voice</a>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `).join('');
         }
