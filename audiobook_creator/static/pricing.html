@@ -189,6 +189,48 @@
             color: #ccc;
             font-size: 1.1rem;
         }
+
+        .pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+        }
+
+        .tier-row {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tier-row td {
+            padding: 2rem 1rem;
+        }
+
+        .tier-info {
+            width: 30%;
+        }
+
+        .tier-voices {
+            width: 70%;
+        }
+
+        .voice-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .voice-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .voice-item-details {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -251,29 +293,33 @@
 
         function renderVoices(voices) {
             const grid = document.getElementById('voiceGrid');
-            grid.innerHTML = voices.map(tier => `
-                <div class="tier-section">
-                    <div class="tier-header">
-                        <h2>${tier.tier_name}</h2>
-                        <div class="tier-price">$${tier.price_per_char.toFixed(4)} per character</div>
-                        <p class="tier-description">${tier.description}</p>
-                    </div>
-                    <div class="voice-grid">
-                        ${tier.voices.map(voice => `
-                            <div class="voice-card">
-                                <div class="voice-name">${voice.name}</div>
-                                <div class="voice-details">${voice.country} · ${voice.language}</div>
-                                <ul class="voice-features">
-                                    <li>Neural voice technology</li>
-                                    <li>${voice.gender} voice</li>
-                                    <li>${voice.description || 'Professional quality'}</li>
-                                </ul>
-                                <a href="#" class="try-button" onclick="redirectToLogin()">Try this voice</a>
-                            </div>
+            grid.innerHTML = `
+                <table class="pricing-table">
+                    <tbody>
+                        ${voices.map(tier => `
+                            <tr class="tier-row">
+                                <td class="tier-info">
+                                    <h2>${tier.tier_name}</h2>
+                                    <div class="tier-price">$${tier.price_per_char.toFixed(4)} per character</div>
+                                    <p class="tier-description">${tier.description}</p>
+                                </td>
+                                <td class="tier-voices">
+                                    <div class="voice-list">
+                                        ${tier.voices.map(voice => `
+                                            <div class="voice-item">
+                                                <div>
+                                                    <div class="voice-name">${voice.name}</div>
+                                                    <div class="voice-item-details">${voice.country} · ${voice.language} · ${voice.gender}</div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </td>
+                            </tr>
                         `).join('')}
-                    </div>
-                </div>
-            `).join('');
+                    </tbody>
+                </table>
+            `;
         }
 
         function redirectToLogin() {
