@@ -177,7 +177,7 @@
             <input type="file" id="fileInput" accept=".epub,.mobi,.txt" style="display: none">
         </div>
 
-        <div id="voiceSelection" style="display: none;" class="voice-selection">
+        <div id="voiceSelection" class="voice-selection">
             <h2>Select Voice</h2>
             <select id="voiceSelect" class="voice-dropdown">
                 <option value="">Choose a voice...</option>
@@ -190,7 +190,7 @@
             </div>
 
             <div class="action-buttons">
-                <button id="startConversion" class="primary-button">Start Conversion</button>
+                <button id="startConversion" class="primary-button" disabled>Start Conversion</button>
                 <button id="cancelSelection" class="secondary-button">Cancel</button>
             </div>
         </div>
@@ -265,7 +265,12 @@
             }
         }
 
-        // Update your existing handleFile function to show voice selection
+        function updateStartButton() {
+            const select = document.getElementById('voiceSelect');
+            const startButton = document.getElementById('startConversion');
+            startButton.disabled = !select.value || !currentFile;
+        }
+
         async function handleFile(file) {
             if (!file) return;
 
@@ -279,12 +284,10 @@
 
             currentFile = file;
             errorText.textContent = '';
-
-            // Show voice selection
-            document.getElementById('voiceSelection').style.display = 'block';
             
             // Calculate initial pricing if voice is already selected
             updatePricing();
+            updateStartButton();
         }
 
         async function updatePricing() {
@@ -325,6 +328,12 @@
             }
         }
 
+        // Add this to your DOMContentLoaded event or after your variable declarations
+        document.getElementById('voiceSelect').addEventListener('change', () => {
+            updatePricing();
+            updateStartButton();
+        });
+
         // Add event listeners for the action buttons
         document.getElementById('startConversion').addEventListener('click', async () => {
             const select = document.getElementById('voiceSelect');
@@ -356,9 +365,14 @@
         });
 
         document.getElementById('cancelSelection').addEventListener('click', () => {
+            // Clear voice selection
             document.getElementById('voiceSelect').value = '';
+            // Hide pricing info
             document.getElementById('pricingInfo').style.display = 'none';
-            document.getElementById('voiceSelection').style.display = 'none';
+            // Clear any error messages
+            document.getElementById('error').textContent = '';
+            // Update start button state
+            updateStartButton();
         });
 
         async function logout() {
