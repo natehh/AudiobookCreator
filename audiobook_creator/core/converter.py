@@ -113,7 +113,7 @@ class AudiobookConverter:
         
         if not os.path.exists(temp_file):
             try:
-                communicate = edge_tts.Communicate(content, 'en-US-ChristopherNeural')
+                communicate = edge_tts.Communicate(content, 'en-US-ChristopherNeural', rate="-10%", volume="+0%", pitch="+0Hz")
                 
                 async with aiofiles.open(temp_file, mode="wb") as file:
                     async for chunk in communicate.stream():

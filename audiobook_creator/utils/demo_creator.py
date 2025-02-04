@@ -15,13 +15,11 @@ async def text_to_speech(input_file: str, output_dir: str, voice: str):
     with open(input_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Generate output filename from input filename
-    input_filename = Path(input_file).stem
     output_file = os.path.join(output_dir, f"{voice}.mp3")
     
     try:
-        # Initialize edge-tts communicator
-        communicate = edge_tts.Communicate(content, voice)
+        # Initialize edge-tts communicator with improved parameters
+        communicate = edge_tts.Communicate(content, voice, rate="-10%", volume="+0%", pitch="+0Hz")
         
         # Write audio data to file
         async with aiofiles.open(output_file, mode="wb") as file:
