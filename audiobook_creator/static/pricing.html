@@ -13,6 +13,7 @@
             color: white;
             min-height: 100vh;
             background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            padding-top: 80px;
         }
 
         .container {
@@ -22,10 +23,18 @@
         }
 
         nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 1rem 2rem;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .logo {
@@ -244,8 +253,6 @@
     <nav>
         <a href="/" class="logo">Audiobook Creator</a>
         <div class="nav-buttons">
-            <a href="/static/pricing.html" class="nav-button active">Pricing</a>
-            <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
         </div>
     </nav>
 
@@ -256,11 +263,9 @@
         </div>
 
         <div class="country-filter" id="countryFilter">
-            <!-- Will be populated by JavaScript -->
         </div>
 
         <div class="voice-grid" id="voiceGrid">
-            <!-- Will be populated by JavaScript -->
         </div>
     </div>
 
@@ -342,8 +347,57 @@
             window.location.href = '/static/index.html#signup';
         }
 
+        async function updateNavigation() {
+            try {
+                const response = await fetch('/api/account', {
+                    credentials: 'include'
+                });
+                
+                const isAuthenticated = response.ok;
+                const navButtons = document.querySelector('.nav-buttons');
+                
+                if (isAuthenticated) {
+                    navButtons.innerHTML = `
+                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
+                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
+                        <a href="/static/account.html" class="nav-button">Account</a>
+                        <a href="#" class="nav-button" onclick="logout()">Logout</a>
+                    `;
+                } else {
+                    navButtons.innerHTML = `
+                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
+                        <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
+                    `;
+                }
+                
+                // Set active class for current page
+                const currentPath = window.location.pathname;
+                const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
+                if (currentButton) {
+                    currentButton.classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '/static/index.html';
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
+
         // Load pricing when page loads
-        document.addEventListener('DOMContentLoaded', loadVoicePricing);
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavigation();
+            loadVoicePricing();
+        });
     </script>
 </body>
 </html>

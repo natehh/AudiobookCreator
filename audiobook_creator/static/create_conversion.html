@@ -23,6 +23,22 @@
             border-radius: 16px;
             backdrop-filter: blur(10px);
             margin-top: 2rem;
+            padding-top: 80px;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .upload-area {
@@ -163,10 +179,6 @@
     <nav>
         <a href="/" class="logo">Audiobook Creator</a>
         <div class="nav-buttons">
-            <a href="/static/create_conversion.html" class="nav-button active">Create audiobook</a>
-            <a href="/static/pricing.html" class="nav-button">Pricing</a>
-            <a href="/static/account.html" class="nav-button">Account</a>
-            <a href="#" class="nav-button" onclick="logout()">Logout</a>
         </div>
     </nav>
     <div class="container">
@@ -386,6 +398,43 @@
                 console.error('Error logging out:', error);
             }
         }
+
+        async function updateNavigation() {
+            try {
+                const response = await fetch('/api/account', {
+                    credentials: 'include'
+                });
+                
+                const isAuthenticated = response.ok;
+                const navButtons = document.querySelector('.nav-buttons');
+                
+                if (isAuthenticated) {
+                    navButtons.innerHTML = `
+                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
+                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
+                        <a href="/static/account.html" class="nav-button">Account</a>
+                        <a href="#" class="nav-button" onclick="logout()">Logout</a>
+                    `;
+                } else {
+                    window.location.href = '/static/index.html';
+                }
+                
+                // Set active class for current page
+                const currentPath = window.location.pathname;
+                const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
+                if (currentButton) {
+                    currentButton.classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                window.location.href = '/static/index.html';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNavigation();
+            setupDragAndDrop();
+        });
     </script>
 </body>
 </html>
