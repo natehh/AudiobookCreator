@@ -16,9 +16,9 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 90%;
             margin: 0 auto;
-            padding: 20px;
+            padding: 40px;
         }
 
         nav {
@@ -75,9 +75,6 @@
         }
 
         .voice-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
             padding: 2rem 0;
         }
 
@@ -194,6 +191,9 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         .tier-row {
@@ -205,11 +205,12 @@
         }
 
         .tier-info {
-            width: 30%;
+            width: 25%;
+            padding-right: 2rem;
         }
 
         .tier-voices {
-            width: 70%;
+            width: 75%;
         }
 
         .voice-list {
@@ -230,6 +231,12 @@
         .voice-item-details {
             font-size: 0.9rem;
             color: #ccc;
+        }
+
+        .price-per-million {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-left: 0.5rem;
         }
     </style>
 </head>
@@ -263,8 +270,11 @@
                 const response = await fetch('/api/pricing/voices');
                 const voices = await response.json();
                 
-                // Populate country filter
-                const countries = [...new Set(voices.map(voice => voice.country))];
+                // Get unique countries from all voices across all tiers
+                const countries = [...new Set(
+                    voices.flatMap(tier => tier.voices.map(voice => voice.country))
+                )];
+                
                 const filterContainer = document.getElementById('countryFilter');
                 filterContainer.innerHTML = `
                     <button class="country-button active" data-country="all">All Countries</button>
@@ -282,7 +292,10 @@
                         document.querySelectorAll('.country-button').forEach(b => b.classList.remove('active'));
                         button.classList.add('active');
                         const country = button.dataset.country;
-                        const filtered = country === 'all' ? voices : voices.filter(v => v.country === country);
+                        const filtered = country === 'all' ? voices : voices.map(tier => ({
+                            ...tier,
+                            voices: tier.voices.filter(v => v.country === country)
+                        }));
                         renderVoices(filtered);
                     });
                 });
@@ -300,7 +313,10 @@
                             <tr class="tier-row">
                                 <td class="tier-info">
                                     <h2>${tier.tier_name}</h2>
-                                    <div class="tier-price">$${tier.price_per_char.toFixed(4)} per character</div>
+                                    <div class="tier-price">
+                                        $${tier.price_per_char.toFixed(6)} per character
+                                        <span class="price-per-million">($${(tier.price_per_char * 1000000).toFixed(2)} per million)</span>
+                                    </div>
                                     <p class="tier-description">${tier.description}</p>
                                 </td>
                                 <td class="tier-voices">

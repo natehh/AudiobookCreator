@@ -5,7 +5,7 @@ from .api.routes import AudiobookAPI
 from .api.auth.routes import auth_router
 from .api.auth.tokens import JWTHandler
 from dotenv import load_dotenv
-from .core.database import initialize_db
+from .core.database import initialize_db, populate_initial_data
 from .api.account.routes import account_router
 from .api.pricing.routes import pricing_router
 import os
@@ -19,6 +19,9 @@ app = api.app
 
 # Initialize database
 initialize_db()
+
+# After creating the app but before running it
+populate_initial_data()
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):

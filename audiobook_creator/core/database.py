@@ -5,6 +5,8 @@ import logging
 from datetime import datetime
 import os
 from sqlalchemy.sql import text
+import yaml
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -81,33 +83,26 @@ def get_or_create_user(db: Session, user_info: dict) -> User:
     
     return user
 
+def load_voice_config():
+    """Load voice configuration from YAML file."""
+    config_path = Path(__file__).parent.parent / "config" / "voices.yaml"
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
 def populate_initial_tiers(db: Session):
     """Populate initial voice tiers if they don't exist."""
     try:
-        # Define initial tiers
-        initial_tiers = [
-            {
-                "name": "Basic",
-                "price_per_char": 0.000015,
-                "description": "High-quality voices for personal projects"
-            },
-            {
-                "name": "Premium",
-                "price_per_char": 0.000025,
-                "description": "Professional voices with enhanced clarity and natural intonation"
-            },
-            {
-                "name": "Enterprise",
-                "price_per_char": 0.000040,
-                "description": "Studio-quality voices with the highest fidelity and expression"
-            }
-        ]
+        config = load_voice_config()
         
         # Add tiers if they don't exist
-        for tier_data in initial_tiers:
+        for tier_id, tier_data in config['tiers'].items():
             existing_tier = db.query(VoiceTier).filter_by(name=tier_data["name"]).first()
             if not existing_tier:
-                tier = VoiceTier(**tier_data)
+                tier = VoiceTier(
+                    name=tier_data["name"],
+                    price_per_char=tier_data["price_per_char"],
+                    description=tier_data["description"],
+                )
                 db.add(tier)
         
         db.commit()
@@ -121,55 +116,21 @@ def populate_initial_tiers(db: Session):
 def populate_initial_voices(db: Session):
     """Populate initial voices if they don't exist."""
     try:
+        config = load_voice_config()
+        
         # Get tier IDs
         tiers = {tier.name: tier.id for tier in db.query(VoiceTier).all()}
         
-        # Define initial voices
-        initial_voices = [
-            {
-                "name": "Emma",
-                "country": "US",
-                "language": "English",
-                "source": "azure",
-                "tier_id": tiers["Premium"],
-                "gender": "Female",
-                "description": "Warm and professional American accent"
-            },
-            {
-                "name": "James",
-                "country": "UK",
-                "language": "English",
-                "source": "azure",
-                "tier_id": tiers["Premium"],
-                "gender": "Male",
-                "description": "Clear British accent"
-            },
-            {
-                "name": "Sarah",
-                "country": "Australia",
-                "language": "English",
-                "source": "azure",
-                "tier_id": tiers["Basic"],
-                "gender": "Female",
-                "description": "Friendly Australian accent"
-            },
-            {
-                "name": "Michael",
-                "country": "Canada",
-                "language": "English",
-                "source": "azure",
-                "tier_id": tiers["Enterprise"],
-                "gender": "Male",
-                "description": "Professional Canadian accent"
-            }
-        ]
-        
-        # Add voices if they don't exist
-        for voice_data in initial_voices:
-            existing_voice = db.query(VoicePricing).filter_by(name=voice_data["name"]).first()
-            if not existing_voice:
-                voice = VoicePricing(**voice_data)
-                db.add(voice)
+        # Add voices from config
+        for tier_id, tier_data in config['tiers'].items():
+            for voice_data in tier_data['voices']:
+                existing_voice = db.query(VoicePricing).filter_by(name=voice_data["name"]).first()
+                if not existing_voice:
+                    voice = VoicePricing(
+                        **voice_data,
+                        tier_id=tiers[tier_data["name"]]
+                    )
+                    db.add(voice)
         
         db.commit()
         logger.info("Initial voices populated successfully")
@@ -193,24 +154,25 @@ def initialize_db():
 
     # Create all tables
     Base.metadata.create_all(bind=engine)
-    
-    # Initialize session and populate tiers and voices
-    SessionLocal = sessionmaker(bind=engine)
+    return engine
+
+# Initialize engine once at module level
+engine = initialize_db()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    """Get database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Populate initial data if needed (run this once when application starts)
+def populate_initial_data():
     db = SessionLocal()
     try:
         populate_initial_tiers(db)
         populate_initial_voices(db)
-    finally:
-        db.close()
-    
-    return engine
-
-def get_db():
-    """Get database session."""
-    engine = initialize_db()
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
-    try:
-        yield db
     finally:
         db.close()
