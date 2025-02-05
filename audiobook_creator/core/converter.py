@@ -13,18 +13,21 @@ import edge_tts
 import aiofiles
 from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion
+from ..core.tts_service import TTSService
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
 
 class AudiobookConverter:
-    def __init__(self, file_path: str, output_dir: str, store: ConversionStore):
+    def __init__(self, file_path: str, output_dir: str, store: ConversionStore, voice_id: str):
         self.file_path = file_path
         self.output_dir = output_dir
         self.store = store
         self.conversion_id = str(uuid.uuid4())
+        self.voice_id = voice_id
         metadata = get_book_metadata(Path(file_path))
         self.author = metadata["author"]
+        self.tts_service = TTSService()
 
     def sanitize_filename(self, filename):
         valid_name = "".join(c for c in filename if c.isalnum() or c in "._- ").replace(" ", "_")
@@ -113,12 +116,11 @@ class AudiobookConverter:
         
         if not os.path.exists(temp_file):
             try:
-                communicate = edge_tts.Communicate(content, 'en-US-ChristopherNeural', rate="-10%", volume="+0%", pitch="+0Hz")
-                
-                async with aiofiles.open(temp_file, mode="wb") as file:
-                    async for chunk in communicate.stream():
-                        if chunk["type"] == "audio":
-                            await file.write(chunk["data"])
+                await self.tts_service.convert_to_audio(
+                    text=content,
+                    voice_id=self.voice_id,
+                    output_path=Path(temp_file)
+                )
                 
                 progress = (processed_chars + len(content)) / total_chars
                 logger.info(f"{progress*100}% of book converted")

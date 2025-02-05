@@ -55,6 +55,7 @@ class VoicePricing(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     tier_info = relationship("VoiceTier", back_populates="voices")
+    voice_id = Column(String, nullable=False)
 
 class VoiceTier(Base):
     __tablename__ = "voice_tiers"

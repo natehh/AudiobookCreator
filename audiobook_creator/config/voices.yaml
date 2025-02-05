@@ -244,6 +244,7 @@ tiers:
         source: "azure"
         gender: "Female"
         description: "Friendly Australian accent"
+        voice_id: "en-AU-SarahNeural"
 
   neural:
     name: "Neural"
@@ -256,12 +257,14 @@ tiers:
         source: "azure"
         gender: "Female"
         description: "Warm and professional American accent"
+        voice_id: "en-US-EmmaNeural"
       - name: "James"
         country: "UK"
         language: "English"
         source: "azure"
         gender: "Male"
         description: "Clear British accent"
+        voice_id: "en-GB-JamesNeural"
 
   wavenet:
     name: "WaveNet"
@@ -273,7 +276,8 @@ tiers:
         language: "English"
         source: "azure"
         gender: "Male"
-        description: "Professional Canadian accent" 
+        description: "Professional Canadian accent"
+        voice_id: "en-CA-MichaelNeural"
 
   polyglot:
     name: "Polyglot"
@@ -285,7 +289,8 @@ tiers:
         language: "English"
         source: "azure"
         gender: "Male"
-        description: "Professional Canadian accent" 
+        description: "Professional Canadian accent"
+        voice_id: "en-CA-MichaelPolyglotNeural"
 
   journey:
     name: "Journey"
@@ -298,6 +303,7 @@ tiers:
         source: "azure"
         gender: "Male"
         description: "Professional Canadian accent"
+        voice_id: "en-CA-MichaelJourneyNeural"
 
   studio:
     name: "Studio"
@@ -309,7 +315,8 @@ tiers:
         language: "English"
         source: "azure"
         gender: "Male"
-        description: "Professional Canadian accent" 
+        description: "Professional Canadian accent"
+        voice_id: "en-CA-MichaelStudioNeural"
 
   long-form:
     name: "Long-form"
@@ -321,7 +328,8 @@ tiers:
         language: "English"
         source: "azure"
         gender: "Male"
-        description: "Professional Canadian accent"  
+        description: "Professional Canadian accent"
+        voice_id: "en-CA-MichaelLongFormNeural"
 
   generative:
     name: "Generative"
@@ -333,4 +341,5 @@ tiers:
         language: "English"
         source: "azure"
         gender: "Male"
-        description: "Professional Canadian accent"  
+        description: "Professional Canadian accent"
+        voice_id: "en-CA-MichaelGenerativeNeural"  

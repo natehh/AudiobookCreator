@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -66,6 +66,7 @@ class AudiobookAPI:
         async def create_conversion(
             background_tasks: BackgroundTasks,
             file: UploadFile,
+            voice_id: str = Form(...),
             token: str = Depends(JWTBearer()),
             output_dir: str = "output",
             db: Session = Depends(get_db)
@@ -77,7 +78,12 @@ class AudiobookAPI:
             with open(temp_path, "wb") as f:
                 f.write(await file.read())
             
-            converter = AudiobookConverter(temp_path, output_dir, self.store)
+            converter = AudiobookConverter(
+                temp_path, 
+                output_dir, 
+                self.store,
+                voice_id
+            )
             
             status = ConversionStatus(
                 id=converter.conversion_id,

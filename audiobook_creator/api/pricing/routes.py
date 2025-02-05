@@ -32,7 +32,8 @@ async def get_voice_pricing(db: Session = Depends(get_db)):
             "country": voice.country,
             "language": voice.language,
             "gender": voice.gender,
-            "description": voice.description
+            "description": voice.description,
+            "voice_id": voice.voice_id
         })
     
     return list(voice_tiers.values())
@@ -47,7 +48,7 @@ async def calculate_price(
     try:
         voice_id = urllib.parse.unquote(voice_id)
         voice_data = json.loads(voice_id)
-        if not isinstance(voice_data, dict) or 'price_per_char' not in voice_data or 'name' not in voice_data:
+        if not isinstance(voice_data, dict) or 'price_per_char' not in voice_data or 'voice_id' not in voice_data:
             raise HTTPException(400, "Invalid voice data format")
             
         price_per_char = float(voice_data['price_per_char'])
@@ -70,7 +71,7 @@ async def calculate_price(
                 "char_count": char_count,
                 "price_per_char": price_per_char,
                 "total_price": total_price,
-                "voice_name": voice_data['name']
+                "voice_id": voice_data['voice_id']
             }
         finally:
             # Clean up temporary file

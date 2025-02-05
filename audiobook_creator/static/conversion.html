@@ -129,7 +129,11 @@
 
     <script>
         const API_URL = '';
-        const conversionId = window.location.pathname.split('/').pop();
+        const urlParams = new URLSearchParams(window.location.search);
+        const conversionId = urlParams.get('id');
+        if (!conversionId) {
+            window.location.href = '/static/create_conversion.html';
+        }
         const progressBar = document.getElementById('progressBar');
         const statusText = document.getElementById('status');
         const downloadBtn = document.getElementById('downloadBtn');

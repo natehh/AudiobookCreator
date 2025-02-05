@@ -260,7 +260,8 @@
                         const option = document.createElement('option');
                         option.value = JSON.stringify({
                             name: voice.name,
-                            price_per_char: Number(tier.price_per_char)
+                            voice_id: voice.voice_id,
+                            price_per_char: tier.price_per_char
                         });
                         option.textContent = `${voice.name} (${voice.country})`;
                         optgroup.appendChild(option);
@@ -269,7 +270,6 @@
                     select.appendChild(optgroup);
                 });
 
-                // Add change handler
                 select.addEventListener('change', updatePricing);
             } catch (error) {
                 console.error('Error loading voices:', error);
@@ -356,8 +356,9 @@
 
             const formData = new FormData();
             formData.append('file', currentFile);
-            formData.append('voice', select.value);
-            
+            const voiceData = JSON.parse(select.value);
+            formData.append('voice_id', voiceData.voice_id);
+
             try {
                 const response = await fetch(`${API_URL}/convert/`, {
                     method: 'POST',
