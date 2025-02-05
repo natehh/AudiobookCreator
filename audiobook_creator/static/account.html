@@ -380,9 +380,10 @@
                     method: 'POST',
                     credentials: 'include'
                 });
-                window.location.href = '/static/index.html';
+                window.location.reload();
             } catch (error) {
                 showMessage('Error logging out', 'error');
+                window.location.reload();
             }
         }
 

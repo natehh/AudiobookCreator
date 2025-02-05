@@ -353,7 +353,8 @@
                     credentials: 'include'
                 });
                 
-                const isAuthenticated = response.ok;
+                // Only consider authenticated if response is ok (status 200-299)
+                const isAuthenticated = response.status >= 200 && response.status < 300;
                 const navButtons = document.querySelector('.nav-buttons');
                 
                 if (isAuthenticated) {
@@ -378,6 +379,11 @@
                 }
             } catch (error) {
                 console.error('Error checking authentication:', error);
+                // Show non-authenticated navigation on error
+                navButtons.innerHTML = `
+                    <a href="/static/pricing.html" class="nav-button">Pricing</a>
+                    <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
+                `;
             }
         }
 
@@ -387,9 +393,10 @@
                     method: 'POST',
                     credentials: 'include'
                 });
-                window.location.href = '/static/index.html';
+                window.location.reload();
             } catch (error) {
                 console.error('Error logging out:', error);
+                window.location.reload();
             }
         }
 
