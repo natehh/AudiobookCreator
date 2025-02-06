@@ -1,14 +1,18 @@
 async function loadDemoVoices(selectElement) {
     try {
-        const response = await fetch('/demo-voices');
-        const voices = await response.json();
+        const response = await fetch('/api/pricing/voices');
+        const voiceTiers = await response.json();
         
         selectElement.innerHTML = `
             <option value="">Select a voice</option>
-            ${voices.map(voice => `
-                <option value="${voice.url}" data-name="${voice.name}" data-country="${voice.country}">
-                    ${voice.name} (${voice.country})
-                </option>
+            ${voiceTiers.map(tier => `
+                <optgroup label="${tier.tier_name} - $${tier.price_per_char.toFixed(6)}/char">
+                    ${tier.voices.map(voice => `
+                        <option value="${voice.demo_url}" data-name="${voice.name}" data-country="${voice.country}">
+                            ${voice.name} (${voice.country})
+                        </option>
+                    `).join('')}
+                </optgroup>
             `).join('')}
         `;
     } catch (error) {
