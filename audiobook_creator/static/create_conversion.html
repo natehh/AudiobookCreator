@@ -173,7 +173,62 @@
             background: rgba(255, 255, 255, 0.1);
             color: white;
         }
+
+        /* Demo player styles */
+        .demo-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            margin: 2rem 0;
+        }
+
+        .demo-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #eee;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .demo-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .demo-voice-select {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+        }
+
+        .demo-button {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 24px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .demo-button:hover {
+            background: #ff5252;
+        }
+
+        .demo-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
     </style>
+    <script src="/static/demo-player.js"></script>
 </head>
 <body>
     <nav>
@@ -206,6 +261,8 @@
                 <button id="cancelSelection" class="secondary-button">Cancel</button>
             </div>
         </div>
+        
+        <div id="demoPlayer"></div>
         
         <div class="error" id="error"></div>
     </div>
@@ -435,7 +492,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             updateNavigation();
-            setupDragAndDrop();
+            setupDemoPlayer('demoPlayer');
         });
     </script>
 </body>
