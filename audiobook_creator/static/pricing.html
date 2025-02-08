@@ -405,7 +405,7 @@
 
         async function updateNavigation() {
             try {
-                const response = await fetch('/api/account', {
+                const response = await fetch('/auth/verify', {
                     credentials: 'include'
                 });
                 
@@ -422,8 +422,8 @@
                     `;
                 } else {
                     navButtons.innerHTML = `
+                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
                         <a href="/static/pricing.html" class="nav-button">Pricing</a>
-                        <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
                     `;
                 }
                 
@@ -437,6 +437,7 @@
                 console.error('Error checking authentication:', error);
                 // Show non-authenticated navigation on error
                 navButtons.innerHTML = `
+                    <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
                     <a href="/static/pricing.html" class="nav-button">Pricing</a>
                     <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
                 `;

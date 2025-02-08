@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from ...core.database import get_db
 from .google_oauth import get_google_auth_url, handle_google_callback
-from .tokens import JWTHandler
+from .tokens import JWTHandler, JWTBearer
 from fastapi.responses import JSONResponse
 from .magic_link import create_magic_link, verify_magic_link, create_user_from_magic_link
 from sqlalchemy.orm import Session
@@ -43,7 +43,7 @@ def auth_callback(code: str, db=Depends(get_db)):
     return response
 
 @auth_router.get("/verify")
-async def verify_auth(token: str = Depends(JWTHandler.verify_token)):
+async def verify_auth(token: str = Depends(JWTBearer())):
     """Verify authentication status."""
     return JSONResponse({"authenticated": True})
 
