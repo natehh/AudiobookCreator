@@ -13,13 +13,13 @@
             color: white;
             min-height: 100vh;
             background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-            padding-top: 80px;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            padding-top: 80px;
         }
 
         nav {
@@ -269,6 +269,7 @@
             cursor: not-allowed;
         }
     </style>
+    <script src="/static/demo-player.js"></script>
 </head>
 <body>
     <nav>
@@ -297,22 +298,7 @@
                 </a>
             </div>
 
-            <div class="demo-section">
-                <h2>Try it now</h2>
-                <div class="demo-player">
-                    <select id="voiceSelect" class="voice-select">
-                        <option value="">Select a voice</option>
-                    </select>
-                    <div class="demo-text">
-                        <p id="demoText">It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness, it was the spring of hope, it was the winter of despair, we had everything before us, we had nothing before us, we were all going direct to Heaven, we were all going direct the other way—in short, the period was so far like the present period, that some of its noisiest authorities insisted on its being received, for good or for evil, in the superlative degree of comparison only.</p>
-                    </div>
-                    <div class="demo-controls">
-                        <button onclick="playDemo()" id="playButton" class="demo-button">
-                            ▶ Play Sample
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <div id="demoPlayer"></div>
 
             <div class="features">
                 <div class="feature">
@@ -388,67 +374,6 @@
             // Scroll signup box into view if needed
             signupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        let audioContext;
-        let currentAudio;
-        
-        async function loadVoices() {
-            const select = document.getElementById('voiceSelect');
-            
-            try {
-                const response = await fetch('/demo-voices');
-                const voices = await response.json();
-                
-                voices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.value = voice.file;
-                    option.textContent = `${voice.name} (${voice.country})`;
-                    select.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading voices:', error);
-                showMessage('Error loading voices', 'error');
-            }
-        }
-
-        async function playDemo() {
-            const button = document.getElementById('playButton');
-            const select = document.getElementById('voiceSelect');
-            
-            if (!select.value) {
-                showMessage('Please select a voice first', 'error');
-                return;
-            }
-            
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-                button.textContent = '▶ Play Sample';
-                return;
-            }
-            
-            button.disabled = true;
-            button.textContent = 'Loading...';
-            
-            try {
-                currentAudio = new Audio(`/static/demo_files/${select.value}`);
-                await currentAudio.play();
-                button.textContent = '⏸ Pause';
-                button.disabled = false;
-                
-                currentAudio.onended = () => {
-                    button.textContent = '▶ Play Sample';
-                    currentAudio = null;
-                };
-            } catch (error) {
-                console.error('Error playing audio:', error);
-                button.textContent = '▶ Play Sample';
-                button.disabled = false;
-                showMessage('Error playing audio', 'error');
-            }
-        }
-
-        // Load voices when page loads
-        document.addEventListener('DOMContentLoaded', loadVoices);
 
         async function updateNavigation() {
             try {
@@ -489,6 +414,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             updateNavigation();
+            setupDemoPlayer('demoPlayer');
         });
     </script>
 </body>

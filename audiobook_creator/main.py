@@ -36,6 +36,7 @@ async def auth_middleware(request: Request, call_next):
         "/demo-voices",
         "/static/pricing.html",
         "/api/pricing/voices",
+        "/static/demo-player.js",
     ]
     
     # Check exact matches first
