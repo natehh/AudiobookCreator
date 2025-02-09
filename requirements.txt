@@ -19,3 +19,4 @@ python-jose[cryptography]
 python-multipart
 pydantic[email]
 PyYAML
+stripe==7.11.0

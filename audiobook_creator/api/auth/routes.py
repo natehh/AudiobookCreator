@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
-from ...core.database import get_db
+from ...core.database import get_db, User
 from .google_oauth import get_google_auth_url, handle_google_callback
 from .tokens import JWTHandler, JWTBearer
 from fastapi.responses import JSONResponse
@@ -12,6 +12,19 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+async def get_current_user(
+    token: str = Depends(JWTBearer()),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get the current authenticated user from the JWT token."""
+    try:
+        email = JWTHandler.verify_token(token)
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 auth_router = APIRouter()
 class MagicLinkRequest(BaseModel):

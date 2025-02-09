@@ -202,6 +202,61 @@
                 opacity: 1;
             }
         }
+
+        .payment-method {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .payment-method-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+        }
+
+        .card-details {
+            font-size: 0.9rem;
+        }
+
+        .card-details .card-number {
+            color: #ccc;
+        }
+
+        .card-details .expiry {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .remove-card {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .remove-card:hover {
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .no-payment-methods {
+            text-align: center;
+            color: #999;
+            padding: 2rem;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -227,11 +282,13 @@
 
         <div class="account-section">
             <h2 class="section-title">Billing Information</h2>
-            <div class="form-group">
-                <label>Current Plan</label>
-                <input type="text" id="currentPlan" class="form-input" readonly>
+            <div id="payment-methods">
+                <!-- Payment methods will be loaded here -->
             </div>
-            <button onclick="manageBilling()" class="button">Manage Billing</button>
+            <div class="button-group">
+                <button onclick="window.location.href='/static/payment.html'" class="button">Add Payment Method</button>
+                <button onclick="manageBilling()" class="button">View Billing History</button>
+            </div>
         </div>
 
         <div class="account-section">
@@ -291,7 +348,6 @@
                 
                 document.getElementById('email').value = data.email;
                 document.getElementById('name').value = data.name || '';
-                document.getElementById('currentPlan').value = data.plan || 'Free';
             } catch (error) {
                 showMessage('Error loading account information', 'error');
             }
@@ -398,11 +454,71 @@
             }, 5000);
         }
 
+        async function loadPaymentMethods() {
+            try {
+                const response = await fetch('/api/payment-methods', {
+                    credentials: 'include'
+                });
+                const paymentMethods = await response.json();
+                
+                const container = document.getElementById('payment-methods');
+                
+                if (paymentMethods.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-payment-methods">
+                            No payment methods added yet
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = paymentMethods.map(method => `
+                    <div class="payment-method">
+                        <div class="payment-method-info">
+                            <div class="card-icon">💳</div>
+                            <div class="card-details">
+                                <div class="card-number">${method.card.brand} •••• ${method.card.last4}</div>
+                                <div class="expiry">Expires ${method.card.exp_month}/${method.card.exp_year}</div>
+                            </div>
+                        </div>
+                        <button onclick="removePaymentMethod('${method.id}')" class="remove-card">
+                            Remove
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Error loading payment methods', 'error');
+            }
+        }
+
+        async function removePaymentMethod(paymentMethodId) {
+            if (!confirm('Are you sure you want to remove this payment method?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/payment-methods/${paymentMethodId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    showMessage('Payment method removed successfully', 'success');
+                    loadPaymentMethods();
+                } else {
+                    throw new Error('Failed to remove payment method');
+                }
+            } catch (error) {
+                showMessage('Error removing payment method', 'error');
+            }
+        }
+
         // Load data when page loads
         document.addEventListener('DOMContentLoaded', () => {
             updateNavigation();
             loadAccountInfo();
             loadConversions();
+            loadPaymentMethods();
         });
     </script>
 </body>

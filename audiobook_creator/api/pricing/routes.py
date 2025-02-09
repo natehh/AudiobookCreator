@@ -1,14 +1,22 @@
-from fastapi import APIRouter, Depends, UploadFile, HTTPException, File, Form
+from fastapi import APIRouter, Depends, UploadFile, HTTPException, File, Form, Request
 from sqlalchemy.orm import Session
-from ...core.database import get_db, VoicePricing, VoiceTier
-from pathlib import Path
-from ...utils.ebook import get_chapters
+from ...core.database import get_db, VoicePricing, VoiceTier, Payment, Usage, User
+from ...core.stripe_service import StripeService
+from ...core.converter import get_chapters
+from ..auth.routes import get_current_user
+from typing import Optional
+from pydantic import BaseModel
 import json
 import urllib.parse
 import tempfile
 import os
+from pathlib import Path
+import stripe
 
 pricing_router = APIRouter()
+
+class PaymentMethodCreate(BaseModel):
+    payment_method_id: str
 
 @pricing_router.get("/pricing/voices")
 async def get_voice_pricing(db: Session = Depends(get_db)):
@@ -83,3 +91,166 @@ async def calculate_price(
         raise HTTPException(400, f"Invalid price format: {str(e)}")
     except Exception as e:
         raise HTTPException(500, f"Error calculating price: {str(e)}")
+
+@pricing_router.post("/payment/create-intent")
+async def create_payment_intent(
+    amount: float,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a payment intent for the specified amount."""
+    try:
+        # Convert amount to cents for Stripe
+        amount_cents = int(amount * 100)
+        
+        # Create or get Stripe customer
+        if not current_user.stripe_customer_id:
+            customer = await StripeService.create_customer(current_user.email)
+            current_user.stripe_customer_id = customer.id
+            db.commit()
+        
+        # Create payment intent
+        intent = await StripeService.create_payment_intent(
+            amount_cents=amount_cents,
+            customer_id=current_user.stripe_customer_id
+        )
+        
+        # Create payment record
+        payment = Payment(
+            user_id=current_user.id,
+            amount=amount,
+            stripe_payment_intent_id=intent.id,
+            status='pending'
+        )
+        db.add(payment)
+        db.commit()
+        
+        return {
+            "clientSecret": intent.client_secret,
+            "payment_id": payment.id
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@pricing_router.post("/payment-methods/add")
+async def add_payment_method(
+    payment_method: PaymentMethodCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add a payment method to the user's account."""
+    try:
+        # Create or get Stripe customer
+        if not current_user.stripe_customer_id:
+            try:
+                customer = await StripeService.create_customer(current_user.email)
+                current_user.stripe_customer_id = customer.id
+                db.commit()
+            except Exception as e:
+                print(f"Error creating Stripe customer: {str(e)}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to create Stripe customer: {str(e)}"
+                )
+        
+        try:
+            # Attach payment method to customer
+            payment_method = await StripeService.add_payment_method(
+                payment_method_id=payment_method.payment_method_id,
+                customer_id=current_user.stripe_customer_id
+            )
+            return {"status": "success", "payment_method": payment_method}
+        except Exception as e:
+            print(f"Error attaching payment method: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to attach payment method: {str(e)}"
+            )
+    except Exception as e:
+        print(f"Unexpected error in add_payment_method: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail=str(e))
+
+@pricing_router.post("/payment/webhook")
+async def stripe_webhook(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Handle Stripe webhook events."""
+    try:
+        body = await request.body()
+        sig_header = request.headers.get("stripe-signature")
+        
+        try:
+            event = stripe.Webhook.construct_event(
+                body,
+                sig_header,
+                os.getenv("STRIPE_WEBHOOK_SECRET")
+            )
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+            
+        if event.type == "payment_intent.succeeded":
+            payment_intent = event.data.object
+            # Update payment status
+            payment = db.query(Payment).filter_by(
+                stripe_payment_intent_id=payment_intent.id
+            ).first()
+            if payment:
+                payment.status = "succeeded"
+                db.commit()
+                
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@pricing_router.get("/stripe-key")
+async def get_stripe_key(current_user: User = Depends(get_current_user)):
+    """Get Stripe publishable key."""
+    key = os.getenv("STRIPE_PUBLISHABLE_KEY")
+    if not key:
+        raise HTTPException(
+            status_code=500,
+            detail="Stripe publishable key not found in environment variables"
+        )
+    return {"publishableKey": key}
+
+@pricing_router.get("/payment-methods")
+async def get_payment_methods(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's payment methods."""
+    try:
+        if not current_user.stripe_customer_id:
+            return []
+        
+        customer = await StripeService.get_customer(current_user.stripe_customer_id)
+        payment_methods = stripe.PaymentMethod.list(
+            customer=current_user.stripe_customer_id,
+            type="card"
+        )
+        
+        return payment_methods.data
+    except Exception as e:
+        print(f"Error getting payment methods: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@pricing_router.delete("/payment-methods/{payment_method_id}")
+async def delete_payment_method(
+    payment_method_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a payment method."""
+    try:
+        if not current_user.stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No customer ID found")
+        
+        # Detach the payment method from the customer
+        payment_method = stripe.PaymentMethod.detach(payment_method_id)
+        return {"status": "success", "payment_method": payment_method}
+    except Exception as e:
+        print(f"Error deleting payment method: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))

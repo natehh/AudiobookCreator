@@ -26,6 +26,9 @@ class User(Base):
     oauth_provider = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     conversions = relationship("Conversion", back_populates="user")
+    stripe_customer_id = Column(String, unique=True, nullable=True)
+    payments = relationship("Payment", back_populates="user")
+    usages = relationship("Usage", back_populates="user")
 
 class Conversion(Base):
     __tablename__ = "conversions"
@@ -67,6 +70,31 @@ class VoiceTier(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     voices = relationship("VoicePricing", back_populates="tier_info")
+
+class Payment(Base):
+    __tablename__ = "payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    amount = Column(Float, nullable=False)
+    stripe_payment_intent_id = Column(String, unique=True)
+    status = Column(String, nullable=False)  # succeeded, pending, failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="payments")
+
+class Usage(Base):
+    __tablename__ = "usages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    characters_processed = Column(Integer, nullable=False)
+    amount_charged = Column(Float, nullable=False)
+    payment_id = Column(Integer, ForeignKey("payments.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="usages")
+    payment = relationship("Payment")
 
 def get_or_create_user(db: Session, user_info: dict) -> User:
     """Get existing user or create a new one."""
