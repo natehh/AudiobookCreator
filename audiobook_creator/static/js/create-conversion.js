@@ -5,11 +5,7 @@ let currentFile = null;
 function initializeCreateConversion() {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
-    const voiceSelection = document.getElementById('voiceSelection');
     const errorText = document.getElementById('error');
-
-    // Initially hide the voice selection
-    voiceSelection.style.display = 'none';
 
     // Setup file input click handler
     dropZone.addEventListener('click', () => fileInput.click());
@@ -93,7 +89,6 @@ async function handleFile(file) {
     if (!file) return;
     
     const dropZone = document.getElementById('dropZone');
-    const voiceSelection = document.getElementById('voiceSelection');
     const errorText = document.getElementById('error');
 
     const validExtensions = ['.epub', '.mobi', '.txt'];
@@ -107,11 +102,10 @@ async function handleFile(file) {
     currentFile = file;
     errorText.textContent = '';
     
-    // Show the voice selection and update the drop zone
+    // Update the drop zone to show selected file
     dropZone.innerHTML = `<p>Selected file: ${file.name}</p>`;
-    voiceSelection.style.display = 'block';
     
-    // Calculate initial pricing if voice is already selected
+    // Calculate pricing if voice is already selected
     updatePricing();
     updateStartButton();
 }
@@ -184,7 +178,6 @@ async function startConversion() {
 
 function cancelSelection() {
     const dropZone = document.getElementById('dropZone');
-    const voiceSelection = document.getElementById('voiceSelection');
     const errorText = document.getElementById('error');
 
     // Reset file selection
@@ -194,10 +187,6 @@ function cancelSelection() {
         <p>Supported formats: .epub, .mobi, .txt</p>
     `;
     
-    // Clear voice selection
-    document.getElementById('voiceSelect').value = '';
-    // Hide voice selection section
-    voiceSelection.style.display = 'none';
     // Hide pricing info
     document.getElementById('pricingInfo').style.display = 'none';
     // Clear any error messages
