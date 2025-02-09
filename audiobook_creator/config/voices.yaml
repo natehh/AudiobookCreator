@@ -1,7 +1,7 @@
 tiers:
   free:
     name: "Free"
-    price_per_char: 0.0
+    price_per_char: 0.000001
     description: "Voices from the Edge TTS engine"
     voices:
       - name: "Natasha"

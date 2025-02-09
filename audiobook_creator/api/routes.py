@@ -10,7 +10,7 @@ from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
 from .models import ConversionStatus
 from sqlalchemy.orm import Session
-from ..core.database import get_db, Conversion, get_or_create_user, User
+from ..core.database import get_db, Conversion, get_or_create_user, User, Payment, Usage
 from ..utils.ebook import get_book_metadata
 from .auth.tokens import JWTBearer, JWTHandler
 import re
@@ -67,12 +67,31 @@ class AudiobookAPI:
             background_tasks: BackgroundTasks,
             file: UploadFile,
             voice_id: str = Form(...),
+            payment_id: int = Form(...),
             token: str = Depends(JWTBearer()),
             output_dir: str = "output",
             db: Session = Depends(get_db)
         ):
             if not file.filename.endswith(('.epub', '.mobi', '.txt')):
                 raise HTTPException(400, "Unsupported file format")
+            
+            # Get user from token
+            user_email = JWTHandler.verify_token(token)
+            user = get_or_create_user(db, {"email": user_email})
+            
+            # Verify payment
+            payment = db.query(Payment).filter(
+                Payment.id == payment_id,
+                Payment.user_id == user.id,
+                Payment.status == 'pending'
+            ).first()
+            
+            if not payment:
+                raise HTTPException(400, "Invalid or expired payment")
+            
+            # Update payment status
+            payment.status = 'succeeded'
+            db.commit()
             
             temp_path = f"temp_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
             with open(temp_path, "wb") as f:
@@ -92,13 +111,6 @@ class AudiobookAPI:
                 temp_file=temp_path
             )
             self.store.add(status)
-
-            # Get user email from token
-            user_email = JWTHandler.verify_token(token)
-            
-            # Get or create the user
-            user_info = {"email": user_email}
-            user = get_or_create_user(db, user_info)
             
             # Get book metadata
             book_metadata = get_book_metadata(Path(temp_path))
@@ -114,8 +126,16 @@ class AudiobookAPI:
                 progress=0.0
             )
             db.add(conversion)
+            
+            # Create usage record
+            usage = Usage(
+                user_id=user.id,
+                characters_processed=book_metadata.get("char_count", 0),
+                amount_charged=payment.amount,
+                payment_id=payment.id
+            )
+            db.add(usage)
             db.commit()
-            db.refresh(conversion)
             
             background_tasks.add_task(converter.convert)
             

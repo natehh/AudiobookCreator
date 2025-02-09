@@ -18,6 +18,9 @@ pricing_router = APIRouter()
 class PaymentMethodCreate(BaseModel):
     payment_method_id: str
 
+class PaymentIntentCreate(BaseModel):
+    amount: float
+
 @pricing_router.get("/pricing/voices")
 async def get_voice_pricing(db: Session = Depends(get_db)):
     """Get all voice pricing information grouped by tier."""
@@ -94,14 +97,14 @@ async def calculate_price(
 
 @pricing_router.post("/payment/create-intent")
 async def create_payment_intent(
-    amount: float,
+    payment: PaymentIntentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Create a payment intent for the specified amount."""
     try:
         # Convert amount to cents for Stripe
-        amount_cents = int(amount * 100)
+        amount_cents = int(payment.amount * 100)
         
         # Create or get Stripe customer
         if not current_user.stripe_customer_id:
@@ -118,7 +121,7 @@ async def create_payment_intent(
         # Create payment record
         payment = Payment(
             user_id=current_user.id,
-            amount=amount,
+            amount=payment.amount,
             stripe_payment_intent_id=intent.id,
             status='pending'
         )

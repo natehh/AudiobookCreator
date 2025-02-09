@@ -1,5 +1,6 @@
 const API_URL = '';
 let currentFile = null;
+let STRIPE_PUBLISHABLE_KEY = null;
 
 // Setup drag and drop
 function initializeCreateConversion() {
@@ -139,7 +140,34 @@ async function updatePricing() {
         
         document.getElementById('charCount').textContent = data.char_count.toLocaleString();
         document.getElementById('pricePerChar').textContent = data.price_per_char.toFixed(6);
-        document.getElementById('totalPrice').textContent = data.total_price.toFixed(2);
+        
+        const calculatedPrice = data.total_price;
+        const totalPriceElement = document.getElementById('totalPrice');
+
+        if (calculatedPrice > 0 && calculatedPrice < 0.50) {
+            // Show adjusted price with explanation
+            totalPriceElement.textContent = '0.50';
+            // Add or update minimum price message
+            let minPriceMsg = document.getElementById('minPriceMessage');
+            if (!minPriceMsg) {
+                minPriceMsg = document.createElement('p');
+                minPriceMsg.id = 'minPriceMessage';
+                minPriceMsg.style.color = '#ff6b6b';
+                minPriceMsg.style.fontSize = '0.9em';
+                minPriceMsg.style.marginTop = '5px';
+                pricingInfo.appendChild(minPriceMsg);
+            }
+            minPriceMsg.textContent = `(Adjusted from $${calculatedPrice.toFixed(2)} to minimum payment amount)`;
+        } else {
+            // Show regular price
+            totalPriceElement.textContent = calculatedPrice.toFixed(2);
+            // Remove minimum price message if it exists
+            const minPriceMsg = document.getElementById('minPriceMessage');
+            if (minPriceMsg) {
+                minPriceMsg.remove();
+            }
+        }
+        
         pricingInfo.style.display = 'block';
     } catch (error) {
         errorText.textContent = `Error calculating price: ${error.message}`;
@@ -148,31 +176,135 @@ async function updatePricing() {
 
 async function startConversion() {
     const select = document.getElementById('voiceSelect');
+    const errorText = document.getElementById('error');
+    const startButton = document.getElementById('startConversion');
+    
+    errorText.textContent = ''; // Clear any previous errors
+    
     if (!select.value) {
         errorText.textContent = 'Please select a voice first';
         return;
     }
 
-    const formData = new FormData();
-    formData.append('file', currentFile);
-    const voiceData = JSON.parse(select.value);
-    formData.append('voice_id', voiceData.voice_id);
-
     try {
-        const response = await fetch(`${API_URL}/convert/`, {
+        startButton.disabled = true;
+        
+        const totalPriceElement = document.getElementById('totalPrice');
+        const totalPrice = parseFloat(totalPriceElement.textContent);
+        
+        if (isNaN(totalPrice)) {
+            throw new Error('Invalid price amount');
+        }
+
+        // Skip payment process if price is 0
+        if (totalPrice === 0) {
+            // Directly start conversion without payment
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            const voiceData = JSON.parse(select.value);
+            formData.append('voice_id', voiceData.voice_id);
+
+            const conversionResponse = await fetch(`${API_URL}/convert/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+
+            if (!conversionResponse.ok) {
+                const convError = await conversionResponse.json();
+                throw new Error(convError.detail || 'Conversion failed');
+            }
+
+            const data = await conversionResponse.json();
+            window.location.href = `/static/conversion.html?id=${data.id}`;
+            return;
+        }
+
+        // For paid conversions, ensure minimum charge of $0.50
+        const adjustedPrice = totalPrice < 0.50 ? 0.50 : totalPrice;
+
+        // Create payment intent
+        const response = await fetch('/api/payment/create-intent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                amount: adjustedPrice
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to create payment');
+        }
+
+        const { clientSecret, payment_id } = await response.json();
+
+        // Get the payment method
+        const paymentMethodResponse = await fetch('/api/payment-methods', {
+            credentials: 'include'
+        });
+        
+        if (!paymentMethodResponse.ok) {
+            throw new Error('Failed to get payment methods');
+        }
+        
+        const paymentMethods = await paymentMethodResponse.json();
+
+        if (!paymentMethods || paymentMethods.length === 0) {
+            // Redirect to payment method page if no payment method is available
+            window.location.href = '/static/payment.html';
+            return;
+        }
+
+        // Use the first payment method
+        const paymentMethod = paymentMethods[0];
+
+        // Initialize Stripe
+        if (!STRIPE_PUBLISHABLE_KEY) {
+            throw new Error('Stripe not properly initialized');
+        }
+        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+
+        // Confirm the payment
+        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: paymentMethod.id
+        });
+
+        if (confirmError) {
+            throw new Error(confirmError.message);
+        }
+
+        if (paymentIntent.status !== 'succeeded') {
+            throw new Error('Payment failed');
+        }
+
+        // If payment successful, start the conversion
+        const formData = new FormData();
+        formData.append('file', currentFile);
+        const voiceData = JSON.parse(select.value);
+        formData.append('voice_id', voiceData.voice_id);
+        formData.append('payment_id', payment_id);
+
+        const conversionResponse = await fetch(`${API_URL}/convert/`, {
             method: 'POST',
             body: formData,
             credentials: 'include'
         });
 
-        if (!response.ok) {
-            throw new Error('Conversion failed');
+        if (!conversionResponse.ok) {
+            const convError = await conversionResponse.json();
+            throw new Error(convError.detail || 'Conversion failed');
         }
 
-        const data = await response.json();
+        const data = await conversionResponse.json();
         window.location.href = `/static/conversion.html?id=${data.id}`;
     } catch (error) {
+        console.error('Error in startConversion:', error);
         errorText.textContent = `Error: ${error.message}`;
+        startButton.disabled = false;
     }
 }
 
@@ -196,7 +328,20 @@ function cancelSelection() {
 }
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Get Stripe publishable key
+        const response = await fetch('/api/stripe-key');
+        if (!response.ok) {
+            throw new Error('Failed to get Stripe key');
+        }
+        const data = await response.json();
+        STRIPE_PUBLISHABLE_KEY = data.publishableKey;
+    } catch (error) {
+        console.error('Error getting Stripe key:', error);
+        document.getElementById('error').textContent = 'Error initializing payment system';
+    }
+
     initializeCreateConversion();
     setupDemoPlayer('demoPlayer');
 }); 
