@@ -56,8 +56,13 @@ class AudiobookConverter:
             total_chars = sum(len(content) for _, content in chapters)
             logger.info(f"Total characters to process: {total_chars}")
             
+            # Extract voice name from voice_id (e.g., "en-US-JennyNeural" -> "Jenny")
+            voice_name = re.search(r'-(\w+)Neural$', self.voice_id)
+            voice_name = voice_name.group(1) if voice_name else 'Unknown'
+            
+            # Create directory with book title and voice name
             book_dir = os.path.join(self.output_dir, 
-                                re.sub(r'[<>:"/\\|?*]', '_', book_title))
+                                re.sub(r'[<>:"/\\|?*]', '_', f"{book_title} ({voice_name})"))
             os.makedirs(book_dir, exist_ok=True)
             logger.info(f"Created book directory: {book_dir}")
             
@@ -78,7 +83,7 @@ class AudiobookConverter:
                 )
                 db.commit()
 
-            final_file = self._create_m4b(book_dir, book_title, chapter_files)
+            final_file = self._create_m4b(book_dir, f"{book_title} ({voice_name})", chapter_files)
             self.store.update(
                 self.conversion_id,
                 output_files=[final_file],
