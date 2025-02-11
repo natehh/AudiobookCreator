@@ -160,24 +160,31 @@ class AudiobookConverter:
         # Export as M4B
         combined.export(output_file, format='ipod')
         
-        # Add chapters and metadata
-        audio = MP4(output_file)
+        # Write ffmetadata file with chapters and global metadata
+        meta_file = os.path.join(book_dir, "ffmetadata.txt")
+        with open(meta_file, "w", encoding="utf-8") as f:
+            f.write(";FFMETADATA1\n")
+            f.write(f"title={book_title}\n")
+            if hasattr(self, 'author'):
+                f.write(f"artist={self.author}\n")
+            f.write("\n")
+            for i, (start, chap_title) in enumerate(chapter_times):
+                end = chapter_times[i+1][0] if i+1 < len(chapter_times) else total_time
+                f.write("[CHAPTER]\n")
+                f.write("TIMEBASE=1/1000\n")
+                f.write(f"START={start}\n")
+                f.write(f"END={end}\n")
+                f.write(f"title={chap_title}\n\n")
         
-        # chaps = []
-        # for i, (start_time, title) in enumerate(chapter_times):
-        #     end_time = chapter_times[i+1][0] if i < len(chapter_times)-1 else total_time
-        #     chaps.extend([
-        #         str(start_time),
-        #         str(end_time),
-        #         title
-        #     ])
-        
-        # audio.tags['©chp'] = chaps
-        
-        audio['\xa9nam'] = [book_title]
-        if hasattr(self, 'author'):
-            audio['\xa9ART'] = [self.author]
-        
-        audio.save()
+        # Use ffmpeg to embed chapters from the metadata file
+        temp_output = output_file + "_temp.m4b"
+        import subprocess
+        cmd = f'ffmpeg -y -i "{output_file}" -i "{meta_file}" -map_metadata 1 -codec copy "{temp_output}"'
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            logger.error("Failed to embed chapters with ffmpeg")
+        else:
+            os.replace(temp_output, output_file)
+        os.remove(meta_file)
         
         return output_file
