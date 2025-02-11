@@ -104,5 +104,13 @@ function updateConversionUI(data) {
     }
 }
 
+async function downloadAudiobook() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversionId = urlParams.get('id');
+    if (conversionId) {
+        window.location.href = `/download/${conversionId}`;
+    }
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeConversion); 
