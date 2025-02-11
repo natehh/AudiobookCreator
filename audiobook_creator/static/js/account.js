@@ -30,7 +30,7 @@ async function loadConversions() {
                     </div>
                 </a>
                 ${conv.status === 'completed' ? 
-                    `<button onclick="downloadConversion('${conv.id}')" class="button">Download</button>` : 
+                    `<a href="/download/${conv.id}" class="button" download>Download Audiobook</a>` : 
                     ''}
             </div>
         `).join('');
@@ -138,10 +138,6 @@ async function confirmDeleteAccount() {
             showMessage('Error deleting account', 'error');
         }
     }
-}
-
-async function downloadConversion(id) {
-    window.location.href = `/download/${id}`;
 }
 
 function manageBilling() {
