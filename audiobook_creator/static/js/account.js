@@ -22,7 +22,7 @@ async function loadConversions() {
         const grid = document.getElementById('conversionsGrid');
         grid.innerHTML = conversions.map(conv => `
             <div class="conversion-card">
-                <a href="/conversion/${conv.id}" style="text-decoration: none; color: inherit;">
+                <a href="/static/conversion.html?id=${conv.id}" style="text-decoration: none; color: inherit;">
                     <h3>${conv.title}</h3>
                     <p>Author: ${conv.author}</p>
                     <div class="conversion-status status-${conv.status.toLowerCase()}">
