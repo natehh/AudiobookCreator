@@ -232,12 +232,16 @@
                         `<a href="/download/${conversion.id}" class="button" download>Download Audiobook</a>` : 
                         ''}
                 `;
+                if (conversion.status !== 'completed' && conversion.status !== 'failed') {
+                    setTimeout(loadConversionDetails, 5000);
+                }
             } catch (error) {
                 document.getElementById('conversionInfo').innerHTML = `
                     <div style="color: #ff6b6b; text-align: center; padding: 2rem;">
                         Error loading conversion details. Please try again later.
                     </div>
                 `;
+                setTimeout(loadConversionDetails, 5000);
             }
         }
 
