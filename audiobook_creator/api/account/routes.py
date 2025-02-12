@@ -20,6 +20,7 @@ class ConversionResponse(BaseModel):
     status: str
     progress: float
     created_at: str
+    voice: Optional[str] = None
 
 @account_router.get("/account")
 async def get_account_info(
@@ -86,7 +87,8 @@ async def get_user_conversions(
             author=conv.author,
             status=conv.status,
             progress=conv.progress,
-            created_at=conv.created_at.isoformat()
+            created_at=conv.created_at.isoformat(),
+            voice=conv.voice_id
         ) for conv in conversions
     ]
 

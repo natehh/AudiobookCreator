@@ -25,6 +25,7 @@ async function loadConversions() {
                 <a href="/static/conversion.html?id=${conv.id}" style="text-decoration: none; color: inherit;">
                     <h3>${conv.title}</h3>
                     <p>Author: ${conv.author}</p>
+                    <p>Voice: ${conv.voice ? getFriendlyVoice(conv.voice) : 'Unknown'}</p>
                     <div class="conversion-status status-${conv.status.toLowerCase()}">
                         ${conv.status}
                     </div>
@@ -142,6 +143,11 @@ async function confirmDeleteAccount() {
 
 function manageBilling() {
     window.location.href = '/static/billing.html';
+}
+
+function getFriendlyVoice(voiceId) {
+    const match = /-(\w+)Neural$/.exec(voiceId);
+    return match ? match[1] : voiceId;
 }
 
 // Initialize when DOM is loaded

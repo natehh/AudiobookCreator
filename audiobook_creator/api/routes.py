@@ -123,7 +123,8 @@ class AudiobookAPI:
                 author=book_metadata["author"],
                 input_size=os.path.getsize(temp_path),
                 status="processing",
-                progress=0.0
+                progress=0.0,
+                voice_id=voice_id
             )
             db.add(conversion)
             
@@ -245,5 +246,6 @@ class AudiobookAPI:
                 "author": conversion.author,
                 "status": conversion.status,
                 "progress": conversion.progress,
-                "created_at": conversion.created_at.isoformat()
+                "created_at": conversion.created_at.isoformat(),
+                "voice": conversion.voice_id
             }

@@ -39,6 +39,7 @@ class Conversion(Base):
     input_size = Column(Integer)
     status = Column(String)
     progress = Column(Float)
+    voice_id = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     user = relationship("User", back_populates="conversions")
 
