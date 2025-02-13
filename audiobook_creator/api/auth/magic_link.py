@@ -1,12 +1,10 @@
 import os
 import logging
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from .tokens import JWTHandler
 from ...core.database import get_or_create_user
+from ...utils.email_utils import send_email
 
 def create_magic_link(email: str, db: Session) -> str:
     try:
@@ -26,25 +24,14 @@ def create_magic_link(email: str, db: Session) -> str:
 
 def send_magic_link(email: str, token: str):
     try:
-        sender_email = os.getenv("EMAIL_ADDRESS")
-        sender_password = os.getenv("EMAIL_PASSWORD")
-        
-        if not sender_email or not sender_password:
-            raise ValueError("Email configuration is missing")
-        
-        message = MIMEMultipart()
-        message["From"] = sender_email
-        message["To"] = email
-        message["Subject"] = "Your Signup Link for AudiobookCreator"
-        
         link = f"{os.getenv('APP_URL')}/auth/verify-magic-link?token={token}"
         body = f"Click this link to sign in: {link}\nThis link will expire in 15 minutes."
-        message.attach(MIMEText(body, "plain"))
         
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(sender_email, sender_password)
-            server.send_message(message)
+        send_email(
+            to=email,
+            subject="Your Signup Link for AudiobookCreator",
+            body=body
+        )
             
     except Exception as e:
         logging.error(f"Email error: {str(e)}")

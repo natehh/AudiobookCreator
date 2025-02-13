@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks, Depends, Form
+from fastapi import FastAPI, UploadFile, HTTPException, BackgroundTasks, Depends, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -12,11 +12,18 @@ from .models import ConversionStatus
 from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion, get_or_create_user, User, Payment, Usage
 from ..utils.ebook import get_book_metadata
+from ..utils.email_utils import send_email
 from .auth.tokens import JWTBearer, JWTHandler
 import re
 import logging
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+class FeedbackRequest(BaseModel):
+    message: str
+    includeEmail: bool
+    email: str = None
 
 class AudiobookAPI:
     """FastAPI application for audiobook conversion."""
@@ -249,3 +256,30 @@ class AudiobookAPI:
                 "created_at": conversion.created_at.isoformat(),
                 "voice": conversion.voice_id
             }
+
+        @self.app.post("/send-feedback")
+        async def send_feedback(feedback: FeedbackRequest):
+            """Handle feedback form submissions."""
+            try:
+                # Get the feedback recipient email from environment
+                recipient_email = os.getenv("FEEDBACK_EMAIL", os.getenv("EMAIL_ADDRESS"))
+                if not recipient_email:
+                    raise HTTPException(500, "Feedback email not configured")
+                
+                # Construct the email body
+                body = f"New feedback received:\n\n{feedback.message}"
+                if feedback.includeEmail and feedback.email:
+                    body += f"\n\nReply to: {feedback.email}"
+                
+                # Send the email
+                send_email(
+                    to=recipient_email,
+                    subject="New Feedback from AudiobookCreator",
+                    body=body
+                )
+                
+                return {"status": "success", "message": "Feedback sent successfully"}
+                
+            except Exception as e:
+                logging.error(f"Error sending feedback: {str(e)}")
+                raise HTTPException(500, "Failed to send feedback")
