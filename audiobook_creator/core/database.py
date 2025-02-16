@@ -41,6 +41,7 @@ class Conversion(Base):
     progress = Column(Float)
     voice_id = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+    expiration_date = Column(DateTime, nullable=True)  # When the audiobook will be deleted
     user = relationship("User", back_populates="conversions")
 
 class VoicePricing(Base):

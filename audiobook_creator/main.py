@@ -5,9 +5,12 @@ from .api.routes import AudiobookAPI
 from .api.auth.routes import auth_router
 from .api.auth.tokens import JWTHandler
 from dotenv import load_dotenv
-from .core.database import initialize_db, populate_initial_data
+from .core.database import initialize_db, populate_initial_data, get_db
 from .api.account.routes import account_router
 from .api.pricing.routes import pricing_router
+from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from .utils.cleanup import cleanup_expired_audiobooks
 import os
 
 # Load environment variables
@@ -22,6 +25,23 @@ initialize_db()
 
 # After creating the app but before running it
 populate_initial_data()
+
+# Set up CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Set up static files
+app.mount("/static", StaticFiles(directory="audiobook_creator/static"), name="static")
+
+# Set up cleanup scheduler
+scheduler = AsyncIOScheduler()
+scheduler.add_job(cleanup_expired_audiobooks, 'interval', hours=24, args=[next(get_db())])
+scheduler.start()
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):

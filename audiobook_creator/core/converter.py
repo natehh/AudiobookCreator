@@ -14,6 +14,7 @@ import aiofiles
 from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion
 from ..core.tts_service import TTSService
+from datetime import datetime, timedelta
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +49,7 @@ class AudiobookConverter:
         db = next(get_db())  # Get a database session
         try:
             setup_nltk()
+            
             book_title = get_book_title(Path(self.file_path))
             logger.info(f"Found book title: {book_title}")
             chapters = get_chapters(Path(self.file_path))

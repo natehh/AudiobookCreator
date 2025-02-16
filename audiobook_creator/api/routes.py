@@ -17,6 +17,7 @@ from .auth.tokens import JWTBearer, JWTHandler
 import re
 import logging
 from pydantic import BaseModel
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class AudiobookAPI:
             # Get book metadata
             book_metadata = get_book_metadata(Path(temp_path))
             
-            # Create a new conversion record
+            # Create a new conversion record with expiration date
             conversion = Conversion(
                 id=converter.conversion_id,
                 user_id=user.id,
@@ -131,7 +132,8 @@ class AudiobookAPI:
                 input_size=os.path.getsize(temp_path),
                 status="processing",
                 progress=0.0,
-                voice_id=voice_id
+                voice_id=voice_id,
+                expiration_date=datetime.utcnow() + timedelta(minutes=5)
             )
             db.add(conversion)
             
@@ -163,24 +165,38 @@ class AudiobookAPI:
                 raise HTTPException(404, "Conversion not found")
             return status
 
-        @self.app.delete("/cleanup/{conversion_id}")
-        async def cleanup_conversion(conversion_id: str):
-            status = self.store.get(conversion_id)
-            if not status:
-                raise HTTPException(404, "Conversion not found")
-            
-            if status.temp_file and os.path.exists(status.temp_file):
-                os.remove(status.temp_file)
-            
-            return {"message": "Cleanup completed"}
-        
         @self.app.get("/download/{conversion_id}")
-        async def download_audiobook(conversion_id: str):
+        async def download_audiobook(
+            conversion_id: str,
+            token: str = Depends(JWTBearer()),
+            db: Session = Depends(get_db)
+        ):
+            # Get user from token
+            email = JWTHandler.verify_token(token)
+            user = db.query(User).filter(User.email == email).first()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Get conversion from database
+            conversion = db.query(Conversion).filter(
+                Conversion.id == conversion_id,
+                Conversion.user_id == user.id
+            ).first()
+            
+            if not conversion:
+                raise HTTPException(404, "Conversion not found")
+            
+            if conversion.status != "completed":
+                raise HTTPException(400, "Conversion not yet completed")
+            
+            # Check if audiobook has expired
+            if conversion.expiration_date and conversion.expiration_date < datetime.utcnow():
+                raise HTTPException(400, "Audiobook has expired")
+            
             status = self.store.get(conversion_id)
             if not status:
-                raise HTTPException(404, "Conversion not found")
-            if status.status != "completed":
-                raise HTTPException(400, "Conversion not yet completed")
+                raise HTTPException(404, "Conversion status not found")
             
             output_file = Path(status.output_files[0])
             if not output_file.exists():
@@ -254,6 +270,7 @@ class AudiobookAPI:
                 "status": conversion.status,
                 "progress": conversion.progress,
                 "created_at": conversion.created_at.isoformat(),
+                "expiration_date": conversion.expiration_date.isoformat() if conversion.expiration_date else None,
                 "voice": conversion.voice_id
             }
 

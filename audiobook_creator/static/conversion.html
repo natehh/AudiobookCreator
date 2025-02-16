@@ -151,6 +151,17 @@
             background: #ff6b6b;
             transition: width 0.3s ease;
         }
+
+        .expiration-time {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .expired {
+            color: #ff0000;
+            font-weight: bold;
+        }
     </style>
     <script src="/static/js/common.js"></script>
 </head>
@@ -199,6 +210,7 @@
                 }
 
                 const conversion = await response.json();
+                const isExpired = conversion.expiration_date && new Date(conversion.expiration_date) < new Date();
                 
                 document.getElementById('conversionInfo').innerHTML = `
                     <div class="detail-row">
@@ -232,7 +244,13 @@
                         <div class="detail-label">Created</div>
                         <div class="detail-value">${new Date(conversion.created_at).toLocaleString()}</div>
                     </div>
-                    ${conversion.status === 'completed' ? 
+                    <div class="detail-row">
+                        <div class="detail-label">Expiration</div>
+                        <div class="detail-value">
+                            <div class="expiration-time" data-expiration="${conversion.expiration_date}"></div>
+                        </div>
+                    </div>
+                    ${conversion.status === 'completed' && !isExpired ? 
                         `<a href="/download/${conversion.id}" class="button" download>Download Audiobook</a>` : 
                         ''}
                 `;
@@ -249,8 +267,49 @@
             }
         }
 
+        function formatTimeLeft(expirationDate) {
+            if (!expirationDate) return 'No expiration set';
+            
+            const now = new Date();
+            const expiration = new Date(expirationDate);
+            const diffTime = expiration - now;
+            
+            if (diffTime <= 0) {
+                return 'Expired';
+            }
+            
+            const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            
+            if (days === 0) {
+                return `Expires in ${hours} hours`;
+            }
+            
+            return `Expires in ${days} days, ${hours} hours`;
+        }
+
+        function updateExpirationTime() {
+            const expirationElement = document.querySelector('.expiration-time');
+            if (expirationElement) {
+                const expirationDate = expirationElement.getAttribute('data-expiration');
+                expirationElement.textContent = formatTimeLeft(expirationDate);
+                if (new Date(expirationDate) <= new Date()) {
+                    expirationElement.classList.add('expired');
+                    const downloadButton = document.querySelector('.button');
+                    if (downloadButton) {
+                        downloadButton.style.display = 'none';
+                    }
+                }
+            }
+        }
+
         // Load conversion details when the page loads
         loadConversionDetails();
+
+        // Update time every minute
+        setInterval(updateExpirationTime, 60000);
+        // Initial update
+        document.addEventListener('DOMContentLoaded', updateExpirationTime);
     </script>
     <script src="/static/js/feedback.js"></script>
 </body>
