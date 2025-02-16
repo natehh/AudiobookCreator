@@ -19,25 +19,106 @@ async function loadConversions() {
         });
         const conversions = await response.json();
         
+        console.log('Full conversion objects:', JSON.stringify(conversions, null, 2));
+        
         const grid = document.getElementById('conversionsGrid');
-        grid.innerHTML = conversions.map(conv => `
-            <div class="conversion-card">
-                <a href="/static/conversion.html?id=${conv.id}" style="text-decoration: none; color: inherit;">
-                    <h3>${conv.title}</h3>
-                    <p>Author: ${conv.author}</p>
-                    <p>Voice: ${conv.voice ? getFriendlyVoice(conv.voice) : 'Unknown'}</p>
-                    <div class="conversion-status status-${conv.status.toLowerCase()}">
-                        ${conv.status}
-                    </div>
-                </a>
-                ${conv.status === 'completed' ? 
-                    `<a href="/download/${conv.id}" class="button" download>Download Audiobook</a>` : 
-                    ''}
-            </div>
-        `).join('');
+        grid.innerHTML = conversions.map(conv => {
+            console.log('Processing conversion:', JSON.stringify(conv, null, 2));
+            console.log('Expiration date:', conv.expiration_date);
+            
+            const isExpired = conv.expiration_date && new Date(conv.expiration_date) < new Date();
+            const timeRemaining = conv.expiration_date ? formatTimeLeft(conv.expiration_date) : '';
+            
+            console.log('Is expired:', isExpired);
+            console.log('Time remaining:', timeRemaining);
+            
+            return `
+                <div class="conversion-card">
+                    <a href="/static/conversion.html?id=${conv.id}" style="text-decoration: none; color: inherit;">
+                        <h3>${conv.title}</h3>
+                        <p>Author: ${conv.author}</p>
+                        <p>Voice: ${conv.voice ? getFriendlyVoice(conv.voice) : 'Unknown'}</p>
+                        <div class="conversion-status status-${conv.status.toLowerCase()}">
+                            ${conv.status}
+                        </div>
+                        ${conv.expiration_date ? 
+                            `<div class="expiration-time ${isExpired ? 'expired' : ''}" data-expiration="${conv.expiration_date}">${timeRemaining}</div>` : 
+                            ''}
+                    </a>
+                    ${conv.status === 'completed' && !isExpired ? 
+                        `<a href="/download/${conv.id}" class="button" download>Download Audiobook</a>` : 
+                        ''}
+                </div>
+            `;
+        }).join('');
+
+        // Set up periodic updates for time remaining
+        const updateTimeRemaining = () => {
+            const cards = document.querySelectorAll('.conversion-card');
+            console.log('Found conversion cards:', cards.length);
+            
+            cards.forEach(card => {
+                const expirationElement = card.querySelector('.expiration-time');
+                console.log('Expiration element:', expirationElement);
+                
+                if (expirationElement) {
+                    const expirationDate = expirationElement.getAttribute('data-expiration');
+                    console.log('Expiration date from attribute:', expirationDate);
+                    
+                    if (expirationDate) {
+                        const newTimeRemaining = formatTimeLeft(expirationDate);
+                        console.log('New time remaining:', newTimeRemaining);
+                        
+                        if (newTimeRemaining === '(Expired)') {
+                            expirationElement.classList.add('expired');
+                            const downloadButton = card.querySelector('.button');
+                            if (downloadButton) {
+                                downloadButton.style.display = 'none';
+                            }
+                        }
+                        expirationElement.textContent = newTimeRemaining;
+                    }
+                }
+            });
+        };
+
+        // Clear any existing intervals before setting up a new one
+        if (window.expirationUpdateInterval) {
+            clearInterval(window.expirationUpdateInterval);
+        }
+        window.expirationUpdateInterval = setInterval(updateTimeRemaining, 10000);
+        
+        // Run the update immediately once
+        updateTimeRemaining();
     } catch (error) {
+        console.error('Error loading conversions:', error);
         showMessage('Error loading conversions', 'error');
     }
+}
+
+function formatTimeLeft(expirationDate) {
+    if (!expirationDate) return '';
+    
+    const now = new Date();
+    const expiration = new Date(expirationDate);
+    const diffTime = expiration.getTime() - now.getTime();
+    
+    if (diffTime <= 0) {
+        return '(Expired)';
+    }
+    
+    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days === 0) {
+        if (hours === 0) {
+            return `(${minutes} minutes remaining)`;
+        }
+        return `(${hours} hours, ${minutes} minutes remaining)`;
+    }
+    
+    return `(${days} days, ${hours} hours remaining)`;
 }
 
 async function loadPaymentMethods() {

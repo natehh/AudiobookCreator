@@ -21,6 +21,7 @@ class ConversionResponse(BaseModel):
     progress: float
     created_at: str
     voice: Optional[str] = None
+    expiration_date: Optional[str] = None
 
 @account_router.get("/account")
 async def get_account_info(
@@ -88,7 +89,8 @@ async def get_user_conversions(
             status=conv.status,
             progress=conv.progress,
             created_at=conv.created_at.isoformat(),
-            voice=conv.voice_id
+            voice=conv.voice_id,
+            expiration_date=conv.expiration_date.isoformat() + "Z" if conv.expiration_date else None
         ) for conv in conversions
     ]
 

@@ -159,6 +159,18 @@
             margin-top: 0.5rem;
         }
 
+        .expiration-time {
+            color: #999;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+
+        .expired {
+            color: #ff0000;
+            font-weight: bold;
+        }
+
         .status-completed {
             background: #28a745;
         }
@@ -281,17 +293,6 @@
             color: #ccc;
             font-size: 0.9rem;
         }
-
-        .expiration-time {
-            color: #ff6b6b;
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-        }
-
-        .expired {
-            color: #ff0000;
-            font-weight: bold;
-        }
     </style>
     <script src="/static/js/common.js"></script>
     <script src="/static/js/account.js"></script>
@@ -343,39 +344,5 @@
 
     <div id="message" class="message"></div>
     <script src="/static/js/feedback.js"></script>
-    <script>
-    function formatTimeLeft(expirationDate) {
-        if (!expirationDate) return '';
-        
-        const now = new Date();
-        const expiration = new Date(expirationDate);
-        const diffTime = expiration - now;
-        
-        if (diffTime <= 0) {
-            return 'Expired';
-        }
-        
-        const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        
-        return `Expires in ${days} days, ${hours} hours`;
-    }
-
-    function updateExpirationTimes() {
-        const expirationElements = document.querySelectorAll('.expiration-time');
-        expirationElements.forEach(element => {
-            const expirationDate = element.getAttribute('data-expiration');
-            element.textContent = formatTimeLeft(expirationDate);
-            if (new Date(expirationDate) <= new Date()) {
-                element.classList.add('expired');
-            }
-        });
-    }
-
-    // Update times every minute
-    setInterval(updateExpirationTimes, 60000);
-    // Initial update
-    document.addEventListener('DOMContentLoaded', updateExpirationTimes);
-    </script>
 </body>
 </html> 
