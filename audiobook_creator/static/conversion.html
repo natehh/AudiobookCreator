@@ -271,8 +271,9 @@
             if (!expirationDate) return 'No expiration set';
             
             const now = new Date();
+            // Parse the UTC date string
             const expiration = new Date(expirationDate);
-            const diffTime = expiration - now;
+            const diffTime = expiration.getTime() - now.getTime();
             
             if (diffTime <= 0) {
                 return 'Expired';
@@ -280,9 +281,13 @@
             
             const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
             
             if (days === 0) {
-                return `Expires in ${hours} hours`;
+                if (hours === 0) {
+                    return `Expires in ${minutes} minutes`;
+                }
+                return `Expires in ${hours} hours, ${minutes} minutes`;
             }
             
             return `Expires in ${days} days, ${hours} hours`;
@@ -293,7 +298,7 @@
             if (expirationElement) {
                 const expirationDate = expirationElement.getAttribute('data-expiration');
                 expirationElement.textContent = formatTimeLeft(expirationDate);
-                if (new Date(expirationDate) <= new Date()) {
+                if (expirationDate && new Date(expirationDate).getTime() <= new Date().getTime()) {
                     expirationElement.classList.add('expired');
                     const downloadButton = document.querySelector('.button');
                     if (downloadButton) {
@@ -306,8 +311,8 @@
         // Load conversion details when the page loads
         loadConversionDetails();
 
-        // Update time every minute
-        setInterval(updateExpirationTime, 60000);
+        // Update time more frequently (every 10 seconds) since we're showing minutes
+        setInterval(updateExpirationTime, 10000);
         // Initial update
         document.addEventListener('DOMContentLoaded', updateExpirationTime);
     </script>

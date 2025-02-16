@@ -269,8 +269,8 @@ class AudiobookAPI:
                 "author": conversion.author,
                 "status": conversion.status,
                 "progress": conversion.progress,
-                "created_at": conversion.created_at.isoformat(),
-                "expiration_date": conversion.expiration_date.isoformat() if conversion.expiration_date else None,
+                "created_at": conversion.created_at.isoformat() + "Z",
+                "expiration_date": conversion.expiration_date.isoformat() + "Z" if conversion.expiration_date else None,
                 "voice": conversion.voice_id
             }
 
