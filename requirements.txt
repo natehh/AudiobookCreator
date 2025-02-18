@@ -21,3 +21,4 @@ pydantic[email]
 PyYAML
 stripe==7.11.0
 APScheduler==3.10.4
+google-cloud-texttospeech==2.16.1
