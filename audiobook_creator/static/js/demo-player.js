@@ -8,7 +8,7 @@ async function loadDemoVoices(selectElement) {
             ${voiceTiers.map(tier => `
                 <optgroup label="${tier.tier_name} - $${tier.price_per_char.toFixed(6)}/char">
                     ${tier.voices.map(voice => `
-                        <option value="${voice.demo_url}" data-name="${voice.name}" data-country="${voice.country}">
+                        <option value="/static/demo_files/${voice.voice_id}.mp3" data-name="${voice.name}" data-country="${voice.country}">
                             ${voice.name} (${voice.country})
                         </option>
                     `).join('')}
