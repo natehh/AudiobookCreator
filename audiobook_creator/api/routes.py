@@ -17,7 +17,7 @@ from .auth.tokens import JWTBearer, JWTHandler
 import re
 import logging
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class AudiobookAPI:
                 status="processing",
                 progress=0.0,
                 voice_id=voice_id,
-                expiration_date=datetime.utcnow() + timedelta(hours=24)
+                expiration_date=datetime.now(timezone.utc) + timedelta(hours=24)
             )
             db.add(conversion)
             
@@ -191,7 +191,7 @@ class AudiobookAPI:
                 raise HTTPException(400, "Conversion not yet completed")
             
             # Check if audiobook has expired
-            if conversion.expiration_date and conversion.expiration_date < datetime.utcnow():
+            if conversion.expiration_date and conversion.expiration_date < datetime.now(timezone.utc):
                 raise HTTPException(400, "Audiobook has expired")
             
             status = self.store.get(conversion_id)

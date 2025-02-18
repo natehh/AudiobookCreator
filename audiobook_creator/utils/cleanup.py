@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion
@@ -13,7 +13,7 @@ def cleanup_expired_audiobooks(db: Session):
     try:
         # Get all expired conversions
         expired_conversions = db.query(Conversion).filter(
-            Conversion.expiration_date < datetime.utcnow(),
+            Conversion.expiration_date < datetime.now(timezone.utc),
             Conversion.status == "completed"
         ).all()
 
