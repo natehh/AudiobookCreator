@@ -133,7 +133,7 @@ class AudiobookAPI:
                 status="processing",
                 progress=0.0,
                 voice_id=voice_id,
-                expiration_date=datetime.utcnow() + timedelta(hours24)
+                expiration_date=datetime.utcnow() + timedelta(hours=24)
             )
             db.add(conversion)
             
