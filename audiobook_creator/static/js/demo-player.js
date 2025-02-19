@@ -82,4 +82,8 @@ function setupDemoPlayer(containerId) {
             currentAudio = null;
         }
     });
+}
+
+function initializeDemoPlayer() {
+    setupDemoPlayer('demoPlayer');
 } 

@@ -301,6 +301,7 @@
             cursor: not-allowed;
         }
     </style>
+    <script src="/static/js/common.js"></script>
     <script src="/static/js/demo-player.js"></script>
 </head>
 <body>
@@ -403,15 +404,11 @@
             window.location.href = '/static/index.html#signup';
         }
 
-        async function updateNavigation() {
-            try {
-                const response = await fetch('/auth/verify', {
-                    credentials: 'include'
-                });
-                
-                // Only consider authenticated if response is ok (status 200-299)
-                const isAuthenticated = response.status >= 200 && response.status < 300;
-                const navButtons = document.querySelector('.nav-buttons');
-                
-                if (isAuthenticated) {
-                    navButtons.innerHTML = `
+        // Initialize when document is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVoicePricing();
+            initializeDemoPlayer();
+        });
+    </script>
+</body>
+</html>

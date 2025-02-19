@@ -16,7 +16,15 @@ async function updateNavigation() {
                 <a href="#" class="nav-button" onclick="logout()">Logout</a>
             `;
         } else {
-            window.location.href = '/static/index.html';
+            // For pricing page, show login/signup buttons
+            if (window.location.pathname === '/static/pricing.html') {
+                navButtons.innerHTML = `
+                    <a href="/static/index.html#signup" class="nav-button">Sign Up</a>
+                    <a href="/static/index.html#login" class="nav-button">Login</a>
+                `;
+            } else {
+                window.location.href = '/static/index.html';
+            }
         }
         
         // Set active class for current page
@@ -27,7 +35,10 @@ async function updateNavigation() {
         }
     } catch (error) {
         console.error('Error checking authentication:', error);
-        window.location.href = '/static/index.html';
+        // Don't redirect if on pricing page
+        if (window.location.pathname !== '/static/pricing.html') {
+            window.location.href = '/static/index.html';
+        }
     }
 }
 
