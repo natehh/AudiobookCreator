@@ -191,21 +191,32 @@ class AudiobookAPI:
                 raise HTTPException(400, "Conversion not yet completed")
             
             # Check if audiobook has expired
-            if conversion.expiration_date and conversion.expiration_date < datetime.now(timezone.utc):
-                raise HTTPException(400, "Audiobook has expired")
+            if conversion.expiration_date:
+                # Convert naive datetime to UTC
+                expiration_utc = conversion.expiration_date.replace(tzinfo=timezone.utc)
+                if expiration_utc < datetime.now(timezone.utc):
+                    raise HTTPException(400, "Audiobook has expired")
             
-            status = self.store.get(conversion_id)
-            if not status:
-                raise HTTPException(404, "Conversion status not found")
+            # Construct the expected file path based on the book title and voice
+            book_title = conversion.title.replace(" ", "_")
+            voice_name = re.search(r'-(\w+)Neural$', conversion.voice_id)
+            voice_name = voice_name.group(1) if voice_name else 'Unknown'
             
-            output_file = Path(status.output_files[0])
+            # Use absolute path with Docker volume mount point
+            base_dir = Path("/app/output")
+            book_dir = base_dir / f"{book_title} ({voice_name})"
+            output_file = book_dir / f"{book_title} ({voice_name}).m4b"
+            
+            logger.info(f"Looking for audiobook at: {output_file}")
+            
             if not output_file.exists():
+                logger.error(f"Audio file not found at path: {output_file}")
                 raise HTTPException(404, "Audio file not found")
             
             return FileResponse(
                 path=output_file,
                 filename=output_file.name,
-                media_type="audio/mpeg"
+                media_type="audio/x-m4b"
             )
 
         @self.app.get("/demo-voices")
