@@ -215,8 +215,11 @@
                 }
 
                 const conversion = await response.json();
-                const isExpired = conversion.expiration_date && new Date(conversion.expiration_date) < new Date();
-                const timeRemaining = conversion.expiration_date ? formatTimeLeft(conversion.expiration_date) : '';
+                // Handle UTC dates properly
+                const now = new Date();
+                const expiration = conversion.expiration_date ? new Date(conversion.expiration_date) : null;
+                const isExpired = expiration ? expiration < now : false;
+                const timeRemaining = expiration ? formatTimeLeft(expiration) : '';
                 
                 document.getElementById('conversionInfo').innerHTML = `
                     <div class="detail-row">
@@ -253,8 +256,8 @@
                     <div class="detail-row">
                         <div class="detail-label">Expiration</div>
                         <div class="detail-value ${isExpired ? 'expired' : ''}">
-                            ${conversion.expiration_date ? 
-                                `${new Date(conversion.expiration_date).toLocaleString()}
+                            ${expiration ? 
+                                `${expiration.toLocaleString()}
                                 <div class="expiration-time">${timeRemaining}</div>` : 
                                 'No expiration set'}
                         </div>
@@ -265,11 +268,11 @@
                 `;
 
                 // Set up periodic updates for time remaining
-                if (conversion.expiration_date && !isExpired) {
+                if (expiration && !isExpired) {
                     const updateTimeRemaining = () => {
                         const expirationElement = document.querySelector('.expiration-time');
                         if (expirationElement) {
-                            const newTimeRemaining = formatTimeLeft(conversion.expiration_date);
+                            const newTimeRemaining = formatTimeLeft(expiration);
                             if (newTimeRemaining === '(Expired)') {
                                 expirationElement.parentElement.classList.add('expired');
                                 const downloadButton = document.querySelector('.button');

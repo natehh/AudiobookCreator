@@ -26,8 +26,11 @@ async function loadConversions() {
             console.log('Processing conversion:', JSON.stringify(conv, null, 2));
             console.log('Expiration date:', conv.expiration_date);
             
-            const isExpired = conv.expiration_date && new Date(conv.expiration_date) < new Date();
-            const timeRemaining = conv.expiration_date ? formatTimeLeft(conv.expiration_date) : '';
+            // Handle UTC dates properly
+            const now = new Date();
+            const expiration = conv.expiration_date ? new Date(conv.expiration_date) : null;
+            const isExpired = expiration ? expiration < now : false;
+            const timeRemaining = expiration ? formatTimeLeft(expiration) : '';
             
             console.log('Is expired:', isExpired);
             console.log('Time remaining:', timeRemaining);
@@ -41,7 +44,7 @@ async function loadConversions() {
                         <div class="conversion-status status-${conv.status.toLowerCase()}">
                             ${conv.status}
                         </div>
-                        ${conv.expiration_date ? 
+                        ${expiration ? 
                             `<div class="expiration-time ${isExpired ? 'expired' : ''}" data-expiration="${conv.expiration_date}">${timeRemaining}</div>` : 
                             ''}
                     </a>
@@ -66,7 +69,7 @@ async function loadConversions() {
                     console.log('Expiration date from attribute:', expirationDate);
                     
                     if (expirationDate) {
-                        const newTimeRemaining = formatTimeLeft(expirationDate);
+                        const newTimeRemaining = formatTimeLeft(new Date(expirationDate));
                         console.log('New time remaining:', newTimeRemaining);
                         
                         if (newTimeRemaining === '(Expired)') {

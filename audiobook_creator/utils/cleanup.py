@@ -12,10 +12,16 @@ def cleanup_expired_audiobooks(db: Session):
     """Delete expired audiobooks and update their records."""
     try:
         # Get all expired conversions
+        now_utc = datetime.now(timezone.utc)
         expired_conversions = db.query(Conversion).filter(
-            Conversion.expiration_date < datetime.now(timezone.utc),
             Conversion.status == "completed"
         ).all()
+        
+        # Filter expired conversions manually to handle timezone-naive dates
+        expired_conversions = [
+            conv for conv in expired_conversions 
+            if conv.expiration_date and conv.expiration_date.replace(tzinfo=timezone.utc) < now_utc
+        ]
 
         for conversion in expired_conversions:
             formatted_title = conversion.title.replace(" ", "_")
