@@ -61,6 +61,12 @@ function setupDemoPlayer(containerId) {
 
         try {
             currentAudio = new Audio(select.value);
+            currentAudio.onerror = () => {
+                console.error('Error loading audio file:', select.value);
+                button.textContent = '▶ Play Sample';
+                button.disabled = false;
+                currentAudio = null;
+            };
             await currentAudio.play();
             button.textContent = '⏸ Pause';
             button.disabled = false;
