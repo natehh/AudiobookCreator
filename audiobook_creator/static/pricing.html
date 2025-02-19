@@ -301,7 +301,7 @@
             cursor: not-allowed;
         }
     </style>
-    <script src="/static/demo-player.js"></script>
+    <script src="/static/js/demo-player.js"></script>
 </head>
 <body>
     <nav>
@@ -415,55 +415,3 @@
                 
                 if (isAuthenticated) {
                     navButtons.innerHTML = `
-                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
-                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
-                        <a href="/static/account.html" class="nav-button">Account</a>
-                        <a href="#" class="nav-button" onclick="logout()">Logout</a>
-                    `;
-                } else {
-                    navButtons.innerHTML = `
-                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
-                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
-                    `;
-                }
-                
-                // Set active class for current page
-                const currentPath = window.location.pathname;
-                const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
-                if (currentButton) {
-                    currentButton.classList.add('active');
-                }
-            } catch (error) {
-                console.error('Error checking authentication:', error);
-                // Show non-authenticated navigation on error
-                navButtons.innerHTML = `
-                    <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
-                    <a href="/static/pricing.html" class="nav-button">Pricing</a>
-                    <a href="#" class="nav-button" onclick="redirectToLogin()">Get Started</a>
-                `;
-            }
-        }
-
-        async function logout() {
-            try {
-                await fetch('/auth/logout', {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-                window.location.reload();
-            } catch (error) {
-                console.error('Error logging out:', error);
-                window.location.reload();
-            }
-        }
-
-        // Load pricing when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            updateNavigation();
-            loadVoicePricing();
-            setupDemoPlayer('demoPlayer');
-        });
-    </script>
-    <script src="/static/js/feedback.js"></script>
-</body>
-</html>
