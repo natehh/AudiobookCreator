@@ -338,7 +338,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('Signup link sent! Please check your email.', 'success');
+                    showMessage('Sign in link sent! Please check your email.', 'success');
                 } else {
                     showMessage(data.detail || 'Failed to send signup link', 'error');
                 }
