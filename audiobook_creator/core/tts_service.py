@@ -10,6 +10,10 @@ from pathlib import Path
 from google.cloud import texttospeech
 from dotenv import load_dotenv
 from pydub import AudioSegment
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+from sqlalchemy.orm import Session
+from .database import VoicePricing, get_db
 
 # Load environment variables
 load_dotenv()
@@ -227,53 +231,148 @@ class GoogleTTSProvider(TTSProvider):
         if hasattr(self, 'creds_path') and os.path.exists(self.creds_path):
             os.remove(self.creds_path)
 
+class PollyTTSProvider(TTSProvider):
+    def __init__(self):
+        # Set up AWS client
+        self.client = boto3.client(
+            'polly',
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            region_name=os.getenv('AWS_REGION', 'us-east-1')
+        )
+
+    def _get_polly_voice_id(self, voice_id: str) -> str:
+        """Extract the base voice name from the full voice ID."""
+        # Handle different Amazon voice ID formats
+        if '-standard' in voice_id:
+            # e.g., "en-GB-Amy-standard" -> "Amy"
+            return voice_id.split('-')[-2]
+        elif '-neural' in voice_id:
+            # e.g., "en-GB-Amy-neural" -> "Amy"
+            return voice_id.split('-')[-2]
+        elif '-long-form' in voice_id:
+            # e.g., "en-US-Danielle-long-form" -> "Danielle"
+            return voice_id.split('-')[-2]
+        elif '-generative' in voice_id:
+            # e.g., "en-US-Joanna-generative" -> "Joanna"
+            return voice_id.split('-')[-2]
+        else:
+            # If no pattern matches, use the full ID (shouldn't happen with our config)
+            return voice_id
+
+    def _get_engine_type(self, voice_id: str) -> str:
+        """Determine the engine type based on the voice ID."""
+        if '-neural' in voice_id or '-long-form' in voice_id:
+            return 'neural'
+        elif '-generative' in voice_id:
+            return 'standard'  # Generative voices use the standard engine
+        else:
+            return 'standard'
+
+    async def convert_text(self, text: str, voice_id: str, output_path: Path) -> None:
+        try:
+            # Get appropriate chunk size for this voice and preprocess text
+            max_chars = get_max_chars_for_voice(voice_id)
+            text_chunks = preprocess_text(text, max_chars=max_chars)
+            
+            # Create a temporary directory for chunk files
+            temp_dir = Path(output_path).parent / "temp_chunks"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            combined = AudioSegment.empty()
+            
+            # Get the correct Polly voice ID and engine type
+            polly_voice_id = self._get_polly_voice_id(voice_id)
+            engine = self._get_engine_type(voice_id)
+            
+            # Process each chunk
+            for i, chunk in enumerate(text_chunks):
+                temp_chunk_path = temp_dir / f"chunk_{i}.mp3"
+                
+                try:
+                    # Request speech synthesis
+                    response = self.client.synthesize_speech(
+                        Text=chunk,
+                        OutputFormat='mp3',
+                        VoiceId=polly_voice_id,
+                        Engine=engine
+                    )
+                    
+                    # Write audio stream to file
+                    if "AudioStream" in response:
+                        with open(temp_chunk_path, "wb") as out:
+                            out.write(response["AudioStream"].read())
+                    
+                    # Add to combined audio
+                    chunk_audio = AudioSegment.from_mp3(temp_chunk_path)
+                    combined += chunk_audio
+                    
+                    # Clean up chunk file
+                    os.remove(temp_chunk_path)
+                    
+                except (BotoCoreError, ClientError) as error:
+                    raise Exception(f"AWS Polly error: {str(error)}")
+            
+            # Export final combined audio
+            combined.export(output_path, format="mp3")
+            
+            # Clean up temp directory
+            os.rmdir(temp_dir)
+
+        except Exception as e:
+            # Clean up temp directory if it exists
+            if os.path.exists(temp_dir):
+                import shutil
+                shutil.rmtree(temp_dir)
+            raise Exception(f"Amazon Polly conversion failed: {str(e)}")
+
 class TTSService:
     def __init__(self):
         self._providers = {
-            "edge": EdgeTTSProvider(),
-            "google": GoogleTTSProvider()
+            'edge': EdgeTTSProvider(),
+            'google': GoogleTTSProvider(),
+            'amazon': PollyTTSProvider()
         }
+        self._db = next(get_db())
 
-    async def convert_to_audio(self, text: str, voice_id: str, output_path: Path) -> None:
-        """
-        Convert text to audio using the appropriate provider.
-        
-        Args:
-            text: The text to convert
-            voice_id: The voice ID to use
-            output_path: Where to save the audio file
-        """
-        # Determine provider from voice_id format
-        if voice_id.endswith("Neural"):
-            provider = "edge"
-        else:
-            provider = "google"
-            
-        await self._providers[provider].convert_text(text, voice_id, output_path)
+    def _get_voice_source(self, voice_id: str) -> str:
+        """Get the source provider for a voice ID from the database."""
+        voice = self._db.query(VoicePricing).filter(VoicePricing.voice_id == voice_id).first()
+        if not voice:
+            raise ValueError(f"Voice ID {voice_id} not found in database")
+        return voice.source
 
-    async def get_available_voices(self):
-        """Get all available voices from both providers."""
-        voices = []
+    def _get_provider(self, voice_id: str) -> TTSProvider:
+        """Get the appropriate TTS provider based on the voice source."""
+        source = self._get_voice_source(voice_id)
         
-        # Get Edge voices
-        pattern = re.compile(r'en-(AU|GB|US)-\w+Neural$')
-        for voice in edge_tts.list_voices():
-            voice_id = voice["ShortName"]
-            if pattern.match(voice_id):
-                voices.append(voice_id)
-        
-        # Get Google voices
-        try:
-            google_provider = GoogleTTSProvider()
-            response = google_provider.client.list_voices()
-            pattern = re.compile(r'en-(AU|GB|US)-\w+')
+        if source not in self._providers:
+            raise ValueError(f"Unsupported voice source: {source}")
             
-            for voice in response.voices:
-                for language_code in voice.language_codes:
-                    if pattern.match(voice.name):
-                        voices.append(voice.name)
-                        break
-        except Exception as e:
-            print(f"Error getting Google voices: {str(e)}")
-        
-        return voices
+        return self._providers[source]
+
+    async def convert_text(self, text: str, voice_id: str, output_path: Path) -> None:
+        """Convert text to speech using the appropriate provider."""
+        provider = self._get_provider(voice_id)
+        await provider.convert_text(text, voice_id, output_path)
+
+    def get_available_voices(self) -> list[dict]:
+        """Get all available voices from the database."""
+        voices = self._db.query(VoicePricing).filter(VoicePricing.is_active == True).all()
+        return [
+            {
+                'name': voice.name,
+                'voice_id': voice.voice_id,
+                'country': voice.country,
+                'language': voice.language,
+                'gender': voice.gender,
+                'source': voice.source,
+                'description': voice.description
+            }
+            for voice in voices
+        ]
+
+    def __del__(self):
+        """Clean up database connection."""
+        if hasattr(self, '_db'):
+            self._db.close()

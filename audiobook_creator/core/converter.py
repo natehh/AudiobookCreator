@@ -123,7 +123,7 @@ class AudiobookConverter:
         
         if not os.path.exists(temp_file):
             try:
-                await self.tts_service.convert_to_audio(
+                await self.tts_service.convert_text(
                     text=content,
                     voice_id=self.voice_id,
                     output_path=Path(temp_file)
