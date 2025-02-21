@@ -59,6 +59,7 @@ async def auth_middleware(request: Request, call_next):
         "/static/js/demo-player.js",
         "/static/js/common.js",
         "/auth/verify",
+        "/api/payment/webhook",
     ]
     
     # Check exact matches first
