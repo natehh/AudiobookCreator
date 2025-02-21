@@ -3,6 +3,7 @@ tiers:
     name: "Free"
     price_per_char: 0.0
     description: "Voices from the Edge TTS engine"
+    voices:
       - name: "William"
         country: "Australia"
         language: "English"
