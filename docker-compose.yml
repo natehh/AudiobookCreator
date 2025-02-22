@@ -4,12 +4,6 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
-    image: audiobook-creator:latest
-    deploy:
-      replicas: 2
-      update_config:
-        order: start-first
-        failure_action: rollback
     ports:
       - "8000:8000"
     volumes:
@@ -22,6 +16,7 @@ services:
       - ESPEAK_DATA_PATH=/usr/share/espeak-data
       - AUDIODEV=null
       - SQLALCHEMY_DATABASE_URL=sqlite:////app/data/audiobookcreator.db
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
