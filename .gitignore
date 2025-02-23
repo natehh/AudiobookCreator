@@ -171,7 +171,6 @@ cython_debug/
 .pypirc
 
 .DS_Store
-*.mp3
 output*
 *.epub
 *.mobi
