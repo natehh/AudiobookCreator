@@ -268,6 +268,65 @@
             background: #666;
             cursor: not-allowed;
         }
+
+        .use-cases {
+            margin: 4rem auto;
+            text-align: center;
+            max-width: 1000px;
+        }
+
+        .use-cases h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #ff6b6b, #ff8787);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .use-case-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .use-case-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .use-case-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #ff6b6b;
+        }
+
+        .use-case-card p {
+            color: #eee;
+            line-height: 1.6;
+        }
+
+        .pricing-note {
+            margin-top: 3rem;
+            padding: 1rem;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .pricing-note p {
+            font-size: 1.25rem;
+            color: #ff6b6b;
+            margin: 0;
+        }
     </style>
     <script src="/static/js/demo-player.js"></script>
 </head>
@@ -281,7 +340,7 @@
     <div class="container">
         <div class="hero">
             <h1>Transform Your eBooks Into Audio</h1>
-            <p>Create professional audiobooks instantly with AI-powered voice technology</p>
+            <p>Create professional audiobooks instantly with AI-powered voice technology. Whether you're an author looking to reach new audiences or a reader wanting to listen to your favorite books - get started free today!</p>
             
             <div class="signup-box">
                 <input type="email" id="emailInput" placeholder="Enter your email..." class="signup-input">
@@ -305,10 +364,31 @@
                     🎧 Convert any ebook into a professional audiobook in minutes
                 </div>
                 <div class="feature">
-                    🎭 Choose from dozens of natural-sounding voices
+                    🎭 Choose from over 100 natural-sounding voices
                 </div>
                 <div class="feature">
                     📱 Listen on any device, anywhere
+                </div>
+            </div>
+
+            <div class="use-cases">
+                <h2>Perfect For</h2>
+                <div class="use-case-grid">
+                    <div class="use-case-card">
+                        <h3>📚 Authors & Publishers</h3>
+                        <p>Create professional audiobooks with a one-time fee. Keep 100% of your royalties - no revenue sharing! Perfect for self-published authors and publishing houses looking to expand into the audiobook market.</p>
+                    </div>
+                    <div class="use-case-card">
+                        <h3>👥 Literary Agents</h3>
+                        <p>Help your authors reach new audiences by easily converting their books into audio format. Quick turnaround times mean faster time-to-market and increased revenue opportunities.</p>
+                    </div>
+                    <div class="use-case-card">
+                        <h3>📖 Individual Readers</h3>
+                        <p>Convert your favorite ebooks into audiobooks for personal listening. Perfect for commuting, exercising, or enjoying your books in a new way. Get started with our dozens of free voices!</p>
+                    </div>
+                </div>
+                <div class="pricing-note">
+                    <p>🎉 Get started for free - no credit card required!</p>
                 </div>
             </div>
         </div>
