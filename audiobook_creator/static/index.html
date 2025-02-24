@@ -79,13 +79,23 @@
         }
 
         .hero {
-            text-align: center;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            grid-template-rows: auto auto;
+            gap: 2rem;
             padding: 4rem 1rem;
+            text-align: left;
+        }
+
+        .hero-content {
+            max-width: 600px;
+            grid-row: span 2;
         }
 
         .hero h1 {
             font-size: 3.5rem;
             margin-bottom: 1.5rem;
+            line-height: 1.2;
         }
 
         .hero p {
@@ -116,9 +126,9 @@
             padding: 2rem;
             border-radius: 16px;
             backdrop-filter: blur(10px);
-            max-width: 400px;
-            margin: 2rem auto;
             position: relative;
+            height: fit-content;
+            align-self: start;
         }
 
         .signup-input {
@@ -327,6 +337,24 @@
             color: #ff6b6b;
             margin: 0;
         }
+
+        #demoPlayer {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 968px) {
+            .hero {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                text-align: center;
+                gap: 2rem;
+            }
+
+            .hero-content {
+                grid-row: auto;
+            }
+        }
     </style>
     <script src="/static/js/demo-player.js"></script>
 </head>
@@ -339,9 +367,23 @@
     
     <div class="container">
         <div class="hero">
-            <h1>Transform Your eBooks Into Audio</h1>
-            <p>Create professional audiobooks instantly with AI-powered voice technology. Whether you're an author looking to reach new audiences or a reader wanting to listen to your favorite books - get started free today!</p>
-            
+            <div class="hero-content">
+                <h1>Transform Your eBooks Into Audio</h1>
+                <p>Create professional audiobooks instantly with AI-powered voice technology. Whether you're an author looking to reach new audiences or a reader wanting to listen to your favorite books - get started free today!</p>
+                
+                <div class="features">
+                    <div class="feature">
+                        🎧 Convert any ebook into a professional audiobook in minutes
+                    </div>
+                    <div class="feature">
+                        🎭 Choose from over 100 natural-sounding voices
+                    </div>
+                    <div class="feature">
+                        📱 Listen on any device, anywhere
+                    </div>
+                </div>
+            </div>
+
             <div class="signup-box">
                 <input type="email" id="emailInput" placeholder="Enter your email..." class="signup-input">
                 <button onclick="requestMagicLink()" class="signup-button">Create Your Audiobook →</button>
@@ -358,38 +400,26 @@
             </div>
 
             <div id="demoPlayer"></div>
+        </div>
 
-            <div class="features">
-                <div class="feature">
-                    🎧 Convert any ebook into a professional audiobook in minutes
+        <div class="use-cases">
+            <h2>Perfect For</h2>
+            <div class="use-case-grid">
+                <div class="use-case-card">
+                    <h3>📚 Authors & Publishers</h3>
+                    <p>Create professional audiobooks with a one-time fee. Keep 100% of your royalties - no revenue sharing! Perfect for self-published authors and publishing houses looking to expand into the audiobook market.</p>
                 </div>
-                <div class="feature">
-                    🎭 Choose from over 100 natural-sounding voices
+                <div class="use-case-card">
+                    <h3>👥 Literary Agents</h3>
+                    <p>Help your authors reach new audiences by easily converting their books into audio format. Quick turnaround times mean faster time-to-market and increased revenue opportunities.</p>
                 </div>
-                <div class="feature">
-                    📱 Listen on any device, anywhere
+                <div class="use-case-card">
+                    <h3>📖 Individual Readers</h3>
+                    <p>Convert your favorite ebooks into audiobooks for personal listening. Perfect for commuting, exercising, or enjoying your books in a new way. Get started with our dozens of free voices!</p>
                 </div>
             </div>
-
-            <div class="use-cases">
-                <h2>Perfect For</h2>
-                <div class="use-case-grid">
-                    <div class="use-case-card">
-                        <h3>📚 Authors & Publishers</h3>
-                        <p>Create professional audiobooks with a one-time fee. Keep 100% of your royalties - no revenue sharing! Perfect for self-published authors and publishing houses looking to expand into the audiobook market.</p>
-                    </div>
-                    <div class="use-case-card">
-                        <h3>👥 Literary Agents</h3>
-                        <p>Help your authors reach new audiences by easily converting their books into audio format. Quick turnaround times mean faster time-to-market and increased revenue opportunities.</p>
-                    </div>
-                    <div class="use-case-card">
-                        <h3>📖 Individual Readers</h3>
-                        <p>Convert your favorite ebooks into audiobooks for personal listening. Perfect for commuting, exercising, or enjoying your books in a new way. Get started with our dozens of free voices!</p>
-                    </div>
-                </div>
-                <div class="pricing-note">
-                    <p>🎉 Get started for free - no credit card required!</p>
-                </div>
+            <div class="pricing-note">
+                <p>🎉 Get started for free - no credit card required!</p>
             </div>
         </div>
     </div>
