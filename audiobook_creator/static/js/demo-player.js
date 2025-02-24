@@ -26,7 +26,7 @@ function setupDemoPlayer(containerId) {
     
     container.innerHTML = `
         <div class="demo-section">
-            <h2>Try a sample</h2>
+            <h2>Hear The Quality Yourself</h2>
             <div class="demo-text">
                 <p>It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness...</p>
             </div>

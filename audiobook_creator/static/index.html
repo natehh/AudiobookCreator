@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audiobook Creator</title>
+    <title>Audiobook Creator - Turn Any eBook Into Professional Audio in Minutes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -42,6 +43,13 @@
             font-weight: bold;
             color: white;
             text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            margin-right: 10px;
+            color: #ff6b6b;
         }
 
         .nav-buttons {
@@ -78,6 +86,12 @@
             border-radius: 24px;
         }
 
+        .primary-button:hover {
+            background-color: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
+        }
+
         .hero {
             display: grid;
             grid-template-columns: 1fr 400px;
@@ -85,6 +99,7 @@
             gap: 2rem;
             padding: 4rem 1rem;
             text-align: left;
+            position: relative;
         }
 
         .hero-content {
@@ -96,19 +111,44 @@
             font-size: 3.5rem;
             margin-bottom: 1.5rem;
             line-height: 1.2;
+            background: linear-gradient(135deg, #fff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .hero p {
             font-size: 1.25rem;
             margin-bottom: 2rem;
-            color: #ccc;
+            color: #ddd;
+            animation: fadeIn 1s ease-out 0.2s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .hero-tagline {
+            display: inline-block;
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.6s ease-out;
         }
 
         .features {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            margin-top: 3rem;
+            margin-top: 2rem;
+            animation: fadeIn 1.2s ease-out 0.4s forwards;
+            opacity: 0;
         }
 
         .feature {
@@ -119,6 +159,19 @@
             padding: 1rem;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 12px;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .feature:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .feature i {
+            color: #ff6b6b;
+            font-size: 1.4rem;
+            width: 30px;
+            text-align: center;
         }
 
         .signup-box {
@@ -129,6 +182,16 @@
             position: relative;
             height: fit-content;
             align-self: start;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1.4s ease-out 0.6s forwards;
+            opacity: 0;
+        }
+
+        .signup-header {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: white;
         }
 
         .signup-input {
@@ -137,46 +200,64 @@
             margin-bottom: 1rem;
             border: none;
             border-radius: 8px;
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             box-sizing: border-box;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .signup-input:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            outline: none;
         }
 
         .signup-button {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             border: none;
             border-radius: 8px;
             background: #ff6b6b;
             color: white;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
             cursor: pointer;
             margin-bottom: 1rem;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
         }
 
         .signup-button:hover {
             background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
         }
 
         .google-button {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             border: none;
             border-radius: 8px;
             background: white;
             color: #333;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             text-decoration: none;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.2s;
+            box-sizing: border-box;
         }
 
         .google-button:hover {
             background-color: #f5f5f5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .message {
@@ -200,7 +281,7 @@
         }
 
         .signup-box.highlight {
-            box-shadow: 0 0 0 2px #ff6b6b;
+            box-shadow: 0 0 0 2px #ff6b6b, 0 8px 32px rgba(255, 107, 107, 0.3);
             animation: pulse 1.5s ease-in-out;
         }
 
@@ -220,19 +301,24 @@
                 opacity: 1;
             }
         }
+        
         .demo-section {
-            margin: 3rem auto;
+            margin: 4rem auto;
             max-width: 800px;
             background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 16px;
             backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
 
         .demo-section h2 {
             text-align: center;
             margin-bottom: 1.5rem;
-            font-size: 1.8rem;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #fff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .demo-text {
@@ -240,7 +326,7 @@
             line-height: 1.6;
             margin-bottom: 1.5rem;
             color: #eee;
-            padding: 1rem;
+            padding: 1.2rem;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
         }
@@ -267,11 +353,14 @@
             border-radius: 24px;
             font-size: 1.1rem;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.2s;
+            font-weight: 600;
         }
 
         .demo-button:hover {
             background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
         }
 
         .demo-button:disabled {
@@ -279,8 +368,13 @@
             cursor: not-allowed;
         }
 
+        #demoPlayer {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
         .use-cases {
-            margin: 4rem auto;
+            margin: 5rem auto;
             text-align: center;
             max-width: 1000px;
         }
@@ -305,12 +399,15 @@
             border-radius: 16px;
             padding: 2rem;
             backdrop-filter: blur(10px);
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .use-case-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(255, 107, 107, 0.2);
         }
 
         .use-case-card h3 {
@@ -322,25 +419,272 @@
         .use-case-card p {
             color: #eee;
             line-height: 1.6;
+            flex-grow: 1;
         }
 
-        .pricing-note {
-            margin-top: 3rem;
-            padding: 1rem;
-            background: rgba(255, 107, 107, 0.1);
-            border-radius: 12px;
+        .use-case-card .card-footer {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .use-case-card .price-tag {
             display: inline-block;
+            background: rgba(255, 107, 107, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #ff6b6b;
+            font-weight: 600;
         }
 
-        .pricing-note p {
-            font-size: 1.25rem;
+        .testimonials {
+            margin: 5rem auto;
+            max-width: 1000px;
+        }
+
+        .testimonials h2 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #fff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2rem;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .testimonial-quote {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #eee;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #ff6b6b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .author-info h4 {
+            margin: 0;
+            color: white;
+        }
+
+        .author-info p {
+            margin: 0;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .quote-mark {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            font-size: 4rem;
+            color: rgba(255, 107, 107, 0.2);
+            font-family: serif;
+        }
+
+        .how-it-works {
+            margin: 5rem auto;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        .how-it-works h2 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #fff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+
+        .step h3 {
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .step p {
+            color: #ddd;
+            line-height: 1.6;
+        }
+
+        .step-arrow {
+            position: absolute;
+            top: 50%;
+            right: -25px;
             color: #ff6b6b;
+            font-size: 2rem;
+            transform: translateY(-50%);
+            z-index: 10;
+            display: none;
+        }
+
+        .faq-section {
+            margin: 5rem auto;
+            max-width: 800px;
+        }
+
+        .faq-section h2 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #fff, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .faq-item {
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .faq-question:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            color: #ddd;
+            line-height: 1.6;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            max-height: 1000px;
+        }
+
+        .cta-section {
+            margin: 5rem auto;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+            padding: 4rem 2rem;
+            border-radius: 16px;
+            max-width: 900px;
+        }
+
+        .cta-section h2 {
+            font-size: 2.8rem;
+            margin-bottom: 1.5rem;
+            color: white;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #ddd;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .limited-offer {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        footer {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 5rem;
+        }
+
+        footer p {
+            color: #999;
             margin: 0;
         }
 
-        #demoPlayer {
-            width: 100%;
-            margin-top: 1rem;
+        @media (max-width: 1024px) {
+            .testimonial-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .step-arrow {
+                display: none;
+            }
         }
 
         @media (max-width: 968px) {
@@ -354,13 +698,66 @@
             .hero-content {
                 grid-row: auto;
             }
+            
+            .features {
+                max-width: 600px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            .signup-box {
+                width: 100%;
+                max-width: 400px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+            
+            .cta-buttons .signup-button,
+            .cta-buttons .nav-button {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .hero h1 {
+                font-size: 2.8rem;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .use-case-grid,
+            .steps {
+                grid-template-columns: 1fr;
+            }
+            
+            .trust-badges {
+                gap: 1rem;
+            }
+            
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+            
+            nav {
+                padding: 0.8rem 1rem;
+            }
+            
+            .nav-button {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
         }
     </style>
     <script src="/static/js/demo-player.js"></script>
 </head>
 <body>
     <nav>
-        <a href="/" class="logo">Audiobook Creator</a>
+        <a href="/" class="logo"><i class="fas fa-headphones-alt"></i> Audiobook Creator</a>
         <div class="nav-buttons">
         </div>
     </nav>
@@ -368,25 +765,30 @@
     <div class="container">
         <div class="hero">
             <div class="hero-content">
-                <h1>Transform Your eBooks Into Audio</h1>
-                <p>Create professional audiobooks instantly with AI-powered voice technology. Whether you're an author looking to reach new audiences or a reader wanting to listen to your favorite books - get started free today!</p>
+                <div class="hero-tagline"><i class="fas fa-bolt"></i> AI-Powered Audiobook Technology</div>
+                <h1>If You Have an eBook, You Have an Audiobook</h1>
+                <p>Create professional audiobooks in minutes, not months. Our AI technology transforms your text into captivating audio narration with natural-sounding voices at a fraction of the cost.</p>
                 
                 <div class="features">
                     <div class="feature">
-                        🎧 Convert any ebook into a professional audiobook in minutes
+                        <i class="fas fa-magic"></i>
+                        <span>Convert any ebook into a professional audiobook in minutes</span>
                     </div>
                     <div class="feature">
-                        🎭 Choose from over 100 natural-sounding voices
+                        <i class="fas fa-microphone-alt"></i>
+                        <span>100+ natural-sounding voices in multiple languages</span>
                     </div>
                     <div class="feature">
-                        📱 Listen on any device, anywhere
+                        <i class="fas fa-copyright"></i>
+                        <span>Keep 100% of your royalties - no revenue sharing</span>
                     </div>
                 </div>
             </div>
 
             <div class="signup-box">
+                <h3 class="signup-header">Start Creating Audiobooks Today</h3>
                 <input type="email" id="emailInput" placeholder="Enter your email..." class="signup-input">
-                <button onclick="requestMagicLink()" class="signup-button">Create Your Audiobook →</button>
+                <button onclick="requestMagicLink()" class="signup-button"><i class="fas fa-headphones"></i> Create My First Audiobook</button>
                 <div style="text-align: center; margin: 1rem 0; color: #999;">or</div>
                 <a href="/auth/login/google" class="google-button">
                     <svg width="18" height="18" viewBox="0 0 18 18">
@@ -398,32 +800,50 @@
                     Continue with Google
                 </a>
             </div>
+        </div>
 
-            <div id="demoPlayer"></div>
+        <div id="demoPlayer"></div>
+
+        <div class="how-it-works">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Upload Your eBook</h3>
+                    <p>Upload your ebook file (EPUB, MOBI, TXT) to our secure platform.</p>
+                    <div class="step-arrow"><i class="fas fa-chevron-right"></i></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Choose Your Voice</h3>
+                    <p>Select from over 100 natural-sounding AI voices in different accents and styles.</p>
+                    <div class="step-arrow"><i class="fas fa-chevron-right"></i></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Get Your Audiobook</h3>
+                    <p>Our AI creates your audiobook in minutes. Download or distribute it anywhere.</p>
+                </div>
+            </div>
         </div>
 
         <div class="use-cases">
             <h2>Perfect For</h2>
             <div class="use-case-grid">
                 <div class="use-case-card">
-                    <h3>📚 Authors & Publishers</h3>
-                    <p>Create professional audiobooks with a one-time fee. Keep 100% of your royalties - no revenue sharing! Perfect for self-published authors and publishing houses looking to expand into the audiobook market.</p>
+                    <h3><i class="fas fa-book"></i> Authors & Publishers</h3>
+                    <p>Create professional audiobooks with a one-time fee. Keep 100% of your royalties with no revenue sharing. Reach new audiences and increase your income by offering audio versions of your books.</p>
                 </div>
                 <div class="use-case-card">
-                    <h3>👥 Literary Agents</h3>
-                    <p>Help your authors reach new audiences by easily converting their books into audio format. Quick turnaround times mean faster time-to-market and increased revenue opportunities.</p>
+                    <h3><i class="fas fa-users"></i> Literary Agents</h3>
+                    <p>Help your authors reach new audiences by easily converting their books into audio format. Quick turnaround times mean faster time-to-market and increased revenue opportunities for your clients.</p>
                 </div>
                 <div class="use-case-card">
-                    <h3>📖 Individual Readers</h3>
-                    <p>Convert your favorite ebooks into audiobooks for personal listening. Perfect for commuting, exercising, or enjoying your books in a new way. Get started with our dozens of free voices!</p>
+                    <h3><i class="fas fa-user"></i> Individual Readers</h3>
+                    <p>Convert your favorite ebooks into audiobooks for personal listening. Perfect for commuting, exercising, or enjoying your books in a new way. Our technology makes any text accessible as audio.</p>
                 </div>
-            </div>
-            <div class="pricing-note">
-                <p>🎉 Get started for free - no credit card required!</p>
             </div>
         </div>
-    </div>
-
     <div id="message" class="message"></div>
 
     <script>
