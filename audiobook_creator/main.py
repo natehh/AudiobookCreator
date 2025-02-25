@@ -58,6 +58,7 @@ async def auth_middleware(request: Request, call_next):
         "/api/pricing/voices",
         "/static/js/demo-player.js",
         "/static/js/common.js",
+        "/static/js/feedback.js",
         "/auth/verify",
         "/api/payment/webhook",
     ]
