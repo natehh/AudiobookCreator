@@ -59,6 +59,12 @@ async def auth_middleware(request: Request, call_next):
         "/static/js/demo-player.js",
         "/static/js/common.js",
         "/static/js/feedback.js",
+        "/static/favicon-16x16.png",
+        "/static/favicon-32x32.png",
+        "/static/apple-touch-icon.png",
+        "/static/android-chrome-192x192.png",
+        "/static/android-chrome-512x512.png",
+        "/static/site.webmanifest",
         "/auth/verify",
         "/api/payment/webhook",
     ]
