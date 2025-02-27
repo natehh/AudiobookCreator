@@ -5,25 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audiobook Creator</title>
     <style>
+        :root {
+            --primary-color: #ff6b6b;
+            --primary-hover: #ff5252;
+            --secondary-color: #2196F3;
+            --secondary-hover: #1976D2;
+            --dark-bg: #1a1a1a;
+            --darker-bg: #0a0a0a;
+            --light-text: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --error-color: #ff6b6b;
+            --success-color: #4CAF50;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #000;
-            color: white;
+            background-color: var(--dark-bg);
+            color: var(--light-text);
             min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+            line-height: 1.6;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            padding: 30px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
             backdrop-filter: blur(10px);
             margin-top: 2rem;
-            padding-top: 80px;
+            margin-bottom: 2rem;
+            padding-top: 90px;
+            box-shadow: var(--box-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         nav {
@@ -39,53 +65,22 @@
             backdrop-filter: blur(10px);
             z-index: 1000;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: bold;
-            color: white;
+            color: var(--light-text);
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .upload-area {
-            border: 2px dashed #ccc;
-            border-radius: 4px;
-            padding: 2rem;
-            text-align: center;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .upload-area.dragover {
-            border-color: #ff6b6b;
-            background-color: rgba(255, 107, 107, 0.1);
-        }
-
-        .status {
-            margin-top: 1rem;
-            text-align: center;
-        }
-
-        button {
-            background-color: #ff6b6b;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 24px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #ff5252;
-        }
-
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
+        .logo::before {
+            content: '🎧';
+            font-size: 1.8rem;
         }
 
         .nav-buttons {
@@ -97,10 +92,10 @@
         .nav-button {
             padding: 0.8rem 1.5rem;
             text-decoration: none;
-            color: white;
+            color: var(--light-text);
             background: rgba(255, 255, 255, 0.1);
             border-radius: 24px;
-            transition: all 0.2s ease;
+            transition: var(--transition);
             font-weight: 500;
         }
 
@@ -110,70 +105,322 @@
         }
 
         .nav-button.active {
-            background: #ff6b6b;
+            background: var(--primary-color);
         }
 
         .nav-button.active:hover {
-            background: #ff5252;
+            background: var(--primary-hover);
         }
 
-        .error {
-            color: #ff6b6b;
-            margin-top: 1rem;
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
         }
 
-        .download-btn {
-            background-color: #2196F3;
-            margin-right: 1rem;
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.2rem;
+            color: var(--light-text);
+            letter-spacing: -0.3px;
         }
 
-        .voice-selection {
+        /* Steps progress indicators */
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
             background: rgba(255, 255, 255, 0.1);
-            padding: 1.5rem;
+            z-index: 0;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            border: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .step.active .step-number {
+            background: var(--primary-color);
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        .step.completed .step-number {
+            background: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+
+        .step-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .step.active .step-label, 
+        .step.completed .step-label {
+            color: var(--light-text);
+        }
+
+        /* Upload area styling */
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.03);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: rgba(255, 107, 107, 0.1);
+            transform: scale(1.01);
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            transition: var(--transition);
+        }
+
+        .upload-area:hover .upload-icon,
+        .upload-area.dragover .upload-icon {
+            color: var(--primary-color);
+            transform: translateY(-5px);
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .upload-subtext {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-selected {
+            border: 2px solid var(--success-color);
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.1rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
             border-radius: 8px;
-            margin-top: 1rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .file-icon {
+            font-size: 2rem;
+        }
+
+        .file-details {
+            flex: 1;
+            text-align: left;
+        }
+
+        .file-name {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 250px;
+        }
+
+        .file-type {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Voice selection styling */
+        .voice-selection {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
         }
 
         .voice-dropdown {
             width: 100%;
-            padding: 0.8rem;
-            background: rgba(255, 255, 255, 0.9);
-            border: none;
-            border-radius: 4px;
-            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
             font-size: 1rem;
+            color: var(--light-text);
+            appearance: none;
+            transition: var(--transition);
+            cursor: pointer;
         }
 
+        .voice-dropdown:hover, 
+        .voice-dropdown:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+            outline: none;
+        }
+
+        .voice-dropdown option,
+        .voice-dropdown optgroup {
+            background-color: var(--darker-bg);
+            color: var(--light-text);
+        }
+
+        /* Custom select arrow */
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper::after {
+            content: '▼';
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            transition: var(--transition);
+        }
+
+        .select-wrapper:hover::after {
+            color: var(--light-text);
+        }
+
+        /* Pricing info styling */
         .pricing-info {
             background: rgba(0, 0, 0, 0.2);
-            padding: 1rem;
-            border-radius: 4px;
-            margin: 1rem 0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .pricing-info p {
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .pricing-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .pricing-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .pricing-value {
+            font-weight: 500;
         }
 
         .total-price {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            color: #ff6b6b;
+            color: var(--primary-color);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        /* Button styling */
         .action-buttons {
             display: flex;
             gap: 1rem;
-            margin-top: 1rem;
+            margin-top: 2rem;
         }
 
-        .primary-button, .secondary-button {
+        button {
             padding: 0.8rem 1.5rem;
             border: none;
-            border-radius: 24px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
         }
 
         .primary-button {
-            background: #ff6b6b;
+            background: var(--primary-color);
             color: white;
+            flex: 1;
+            padding: 1rem;
+        }
+
+        .primary-button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
         }
 
         .secondary-button {
@@ -181,23 +428,70 @@
             color: white;
         }
 
-        /* Demo player styles */
+        .secondary-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Error message styling */
+        .error {
+            color: var(--error-color);
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid var(--error-color);
+            display: none;
+        }
+
+        .error:not(:empty) {
+            display: block;
+        }
+
+        /* Demo player section */
         .demo-section {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
             padding: 2rem;
-            border-radius: 16px;
+            border-radius: var(--border-radius);
             backdrop-filter: blur(10px);
-            margin: 2rem 0;
+            margin: 2.5rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: var(--box-shadow);
+        }
+
+        .demo-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            font-weight: 500;
+        }
+
+        .demo-header::before {
+            content: '🎵';
+            font-size: 1.5rem;
         }
 
         .demo-text {
             font-size: 1.1rem;
             line-height: 1.6;
             margin-bottom: 1.5rem;
-            color: #eee;
-            padding: 1rem;
+            color: var(--light-text);
+            padding: 1.5rem;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            font-style: italic;
         }
 
         .demo-controls {
@@ -209,31 +503,119 @@
         .demo-voice-select {
             flex: 1;
             padding: 0.8rem;
-            border: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light-text);
             font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .demo-voice-select:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary-color);
         }
 
         .demo-button {
             padding: 0.8rem 2rem;
             border: none;
-            border-radius: 24px;
-            background: #ff6b6b;
+            border-radius: 8px;
+            background: var(--primary-color);
             color: white;
             font-size: 1.1rem;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .demo-button::before {
+            content: '▶';
+            font-size: 0.8rem;
+        }
+
+        .demo-button.playing::before {
+            content: '⏸';
         }
 
         .demo-button:hover {
-            background: #ff5252;
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
         }
 
         .demo-button:disabled {
-            background: #666;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 1rem;
+                width: auto;
+            }
+
+            .steps {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .steps::before {
+                display: none;
+            }
+
+            .step {
+                flex-direction: row;
+                width: 100%;
+                gap: 1rem;
+            }
+
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .demo-controls {
+                flex-direction: column;
+            }
+
+            .demo-button {
+                width: 100%;
+            }
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite ease-in-out;
+        }
+
     </style>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="/static/js/demo-player.js"></script>
@@ -244,26 +626,57 @@
     <nav>
         <a href="/" class="logo">Audiobook Creator</a>
         <div class="nav-buttons">
+            <!-- Navigation buttons can be added here -->
         </div>
     </nav>
     <div class="container">
-        <h1>Audiobook Creator</h1>
+        <h1>Create Your Audiobook</h1>
+        
+        <!-- Progress steps indicator -->
+        <div class="steps">
+            <div class="step active">
+                <div class="step-number">1</div>
+                <div class="step-label">Upload File</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-label">Select Voice</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-label">Create Audiobook</div>
+            </div>
+        </div>
+        
         <div class="upload-area" id="dropZone">
-            <p>Drag and drop your ebook file here or click to select</p>
-            <p>Supported formats: .epub, .mobi, .txt</p>
+            <div class="upload-icon">📚</div>
+            <div class="upload-text">Drag and drop your ebook file here</div>
+            <div class="upload-subtext">or click to browse files</div>
+            <div class="upload-subtext">Supported formats: .epub, .mobi, .txt</div>
             <input type="file" id="fileInput" accept=".epub,.mobi,.txt" style="display: none">
         </div>
 
         <div id="voiceSelection" class="voice-selection">
             <h2>Select Voice</h2>
-            <select id="voiceSelect" class="voice-dropdown">
-                <option value="">Choose a voice...</option>
-            </select>
+            <div class="select-wrapper">
+                <select id="voiceSelect" class="voice-dropdown">
+                    <option value="">Choose a voice...</option>
+                </select>
+            </div>
             
             <div id="pricingInfo" style="display: none;" class="pricing-info">
-                <p>Estimated characters: <span id="charCount">0</span></p>
-                <p>Price per character: $<span id="pricePerChar">0.000000</span></p>
-                <p class="total-price">Total price: $<span id="totalPrice">0.00</span></p>
+                <p>
+                    <span class="pricing-label">Estimated characters:</span>
+                    <span class="pricing-value" id="charCount">0</span>
+                </p>
+                <p>
+                    <span class="pricing-label">Price per character:</span>
+                    <span class="pricing-value">$<span id="pricePerChar">0.000000</span></span>
+                </p>
+                <p class="total-price">
+                    <span class="pricing-label">Total price:</span>
+                    <span class="pricing-value">$<span id="totalPrice">0.00</span></span>
+                </p>
             </div>
 
             <div class="action-buttons">
@@ -272,7 +685,10 @@
             </div>
         </div>
         
-        <div id="demoPlayer"></div>
+        <div id="demoPlayer" class="demo-section">
+            <h3 class="demo-header">Try a Voice Sample</h3>
+            <!-- Demo player will be inserted here by JavaScript -->
+        </div>
         
         <div class="error" id="error"></div>
     </div>

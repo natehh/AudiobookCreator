@@ -48,6 +48,31 @@ function initializeCreateConversion() {
     document.getElementById('voiceSelect').addEventListener('change', () => {
         updatePricing();
         updateStartButton();
+        updateSteps(2); // Progress to step 2 when voice is selected
+    });
+}
+
+// Update the steps indicator
+function updateSteps(activeStep) {
+    const steps = document.querySelectorAll('.step');
+    
+    steps.forEach((step, index) => {
+        // Convert from 0-based index to 1-based step number
+        const stepNumber = index + 1;
+        
+        if (stepNumber < activeStep) {
+            // Previous steps are marked as completed
+            step.classList.remove('active');
+            step.classList.add('completed');
+        } else if (stepNumber === activeStep) {
+            // Current step is active
+            step.classList.add('active');
+            step.classList.remove('completed');
+        } else {
+            // Future steps are neither active nor completed
+            step.classList.remove('active');
+            step.classList.remove('completed');
+        }
     });
 }
 
@@ -104,11 +129,39 @@ async function handleFile(file) {
     errorText.textContent = '';
     
     // Update the drop zone to show selected file
-    dropZone.innerHTML = `<p>Selected file: ${file.name}</p>`;
+    dropZone.innerHTML = `
+        <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+                <div class="file-name">${file.name}</div>
+                <div class="file-type">${file.type || fileExtension.toUpperCase().substring(1)} - ${formatFileSize(file.size)}</div>
+            </div>
+        </div>
+        <div class="upload-subtext">Click to choose a different file</div>
+        <input type="file" id="fileInput" accept=".epub,.mobi,.txt" style="display: none">
+    `;
+    
+    // Update the file input reference since we replaced the HTML
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const newFile = e.target.files[0];
+        handleFile(newFile);
+    });
+    
+    dropZone.classList.add('file-selected');
+    
+    // Progress to step 2
+    updateSteps(2);
     
     // Calculate pricing if voice is already selected
     updatePricing();
     updateStartButton();
+}
+
+// Format file size in human-readable format
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
 async function updatePricing() {
@@ -152,7 +205,7 @@ async function updatePricing() {
             if (!minPriceMsg) {
                 minPriceMsg = document.createElement('p');
                 minPriceMsg.id = 'minPriceMessage';
-                minPriceMsg.style.color = '#ff6b6b';
+                minPriceMsg.style.color = 'var(--primary-color)';
                 minPriceMsg.style.fontSize = '0.9em';
                 minPriceMsg.style.marginTop = '5px';
                 pricingInfo.appendChild(minPriceMsg);
@@ -169,6 +222,9 @@ async function updatePricing() {
         }
         
         pricingInfo.style.display = 'block';
+        
+        // Enable step 3 when pricing is available
+        updateSteps(3);
     } catch (error) {
         errorText.textContent = `Error calculating price: ${error.message}`;
     }
@@ -188,6 +244,7 @@ async function startConversion() {
 
     try {
         startButton.disabled = true;
+        startButton.innerHTML = '<div class="loader"></div> Processing...';
         
         const totalPriceElement = document.getElementById('totalPrice');
         const totalPrice = parseFloat(totalPriceElement.textContent);
@@ -203,6 +260,7 @@ async function startConversion() {
             formData.append('file', currentFile);
             const voiceData = JSON.parse(select.value);
             formData.append('voice_id', voiceData.voice_id);
+            formData.append('payment_id', 0); // Add a placeholder payment_id for free conversions
 
             const conversionResponse = await fetch(`${API_URL}/convert/`, {
                 method: 'POST',
@@ -305,6 +363,7 @@ async function startConversion() {
         console.error('Error in startConversion:', error);
         errorText.textContent = `Error: ${error.message}`;
         startButton.disabled = false;
+        startButton.textContent = 'Create Audiobook';
     }
 }
 
@@ -315,16 +374,36 @@ function cancelSelection() {
     // Reset file selection
     currentFile = null;
     dropZone.innerHTML = `
-        <p>Drag and drop your ebook file here or click to select</p>
-        <p>Supported formats: .epub, .mobi, .txt</p>
+        <div class="upload-icon">📚</div>
+        <div class="upload-text">Drag and drop your ebook file here</div>
+        <div class="upload-subtext">or click to browse files</div>
+        <div class="upload-subtext">Supported formats: .epub, .mobi, .txt</div>
+        <input type="file" id="fileInput" accept=".epub,.mobi,.txt" style="display: none">
     `;
+    
+    // Re-add click event listener to the file input
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        handleFile(file);
+    });
+    
+    // Remove any classes added to the drop zone
+    dropZone.classList.remove('file-selected');
+    
+    // Reset the voice dropdown
+    document.getElementById('voiceSelect').value = '';
     
     // Hide pricing info
     document.getElementById('pricingInfo').style.display = 'none';
+    
     // Clear any error messages
     errorText.textContent = '';
+    
     // Update start button state
     updateStartButton();
+    
+    // Reset steps to step 1
+    updateSteps(1);
 }
 
 // Initialize when DOM is loaded
@@ -344,4 +423,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initializeCreateConversion();
     setupDemoPlayer('demoPlayer');
+    
+    // Add CSS for loading animation
+    const style = document.createElement('style');
+    style.textContent = `
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
 }); 

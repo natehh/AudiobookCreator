@@ -87,19 +87,32 @@ class AudiobookAPI:
             user_email = JWTHandler.verify_token(token)
             user = get_or_create_user(db, {"email": user_email})
             
-            # Verify payment
-            payment = db.query(Payment).filter(
-                Payment.id == payment_id,
-                Payment.user_id == user.id,
-                Payment.status == 'pending'
-            ).first()
-            
-            if not payment:
-                raise HTTPException(400, "Invalid or expired payment")
-            
-            # Update payment status
-            payment.status = 'succeeded'
-            db.commit()
+            # For free conversions (payment_id = 0), skip payment verification
+            payment = None
+            if payment_id == 0:
+                # Create a free payment record for tracking
+                payment = Payment(
+                    user_id=user.id,
+                    amount=0,
+                    status='succeeded'
+                )
+                db.add(payment)
+                db.commit()
+                db.refresh(payment)  # Get the generated ID
+            else:
+                # Verify payment for paid conversions
+                payment = db.query(Payment).filter(
+                    Payment.id == payment_id,
+                    Payment.user_id == user.id,
+                    Payment.status == 'pending'
+                ).first()
+                
+                if not payment:
+                    raise HTTPException(400, "Invalid or expired payment")
+                
+                # Update payment status
+                payment.status = 'succeeded'
+                db.commit()
             
             temp_path = f"temp_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
             with open(temp_path, "wb") as f:
