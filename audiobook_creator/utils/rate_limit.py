@@ -50,7 +50,7 @@ class RateLimitStorage:
         # First check if the IP is blocked
         with self.lock:
             if key in self.blocked_ips:
-                if time.time() - self.blocked_ips[key] > window * 5:  # Block for 5x the window time
+                if time.time() - self.blocked_ips[key] > window * 3:  # Reduced from 5x to 3x
                     del self.blocked_ips[key]
                 else:
                     return True
@@ -58,8 +58,9 @@ class RateLimitStorage:
         # Check rate limits
         count = self.get_request_count(key, window)
         if count >= max_requests:
-            # If consistently exceeding the limit, block the IP
-            if count >= max_requests * 2:
+            # Only block IPs for extremely excessive requests
+            # Increased from 2x to 5x to reduce false positives
+            if count >= max_requests * 5:
                 with self.lock:
                     self.blocked_ips[key] = time.time()
                 logger.warning(f"IP {key} has been blocked for excessive requests")
@@ -132,7 +133,7 @@ def rate_limit(
     
     return rate_limit_dependency
 
-# Commonly used rate limiters
-auth_rate_limit = rate_limit(max_requests=5, window=60)  # 5 requests per minute for auth endpoints
-conversion_rate_limit = rate_limit(max_requests=3, window=300)  # 3 requests per 5 minutes for conversions
-general_rate_limit = rate_limit(max_requests=60, window=60)  # 60 requests per minute for general endpoints 
+# Commonly used rate limiters with increased limits for normal usage
+auth_rate_limit = rate_limit(max_requests=10, window=60)  # 10 requests per minute for auth endpoints (increased from 5)
+conversion_rate_limit = rate_limit(max_requests=10, window=300)  # 10 requests per 5 minutes for conversions (increased from 3)
+general_rate_limit = rate_limit(max_requests=120, window=60)  # 120 requests per minute for general endpoints (increased from 60) 
