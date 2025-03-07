@@ -14,6 +14,7 @@ from ..core.database import get_db, Conversion, get_or_create_user, User, Paymen
 from ..utils.ebook import get_book_metadata
 from ..utils.email_utils import send_email
 from .auth.tokens import JWTBearer, JWTHandler
+from ..utils.cleanup import sanitize_path
 import re
 import logging
 from pydantic import BaseModel
@@ -212,27 +213,37 @@ class AudiobookAPI:
                 if expiration_utc < datetime.now(timezone.utc):
                     raise HTTPException(400, "Audiobook has expired")
             
-            # Construct the expected file path based on the book title and voice
-            book_title = conversion.title.replace(" ", "_")
-            voice_name = re.search(r'-(\w+)Neural$', conversion.voice_id)
-            voice_name = voice_name.group(1) if voice_name else 'Unknown'
+            # Sanitize book title and voice name
+            book_title = sanitize_path(conversion.title)
             
-            # Use absolute path with Docker volume mount point
-            base_dir = Path("/app/output")
-            book_dir = base_dir / f"{book_title} ({voice_name})"
-            output_file = book_dir / f"{book_title} ({voice_name}).m4b"
+            # Sanitize voice name extraction
+            voice_match = re.search(r'-(\w+)Neural$', conversion.voice_id)
+            voice_name = voice_match.group(1) if voice_match else 'Unknown'
+            voice_name = sanitize_path(voice_name)
             
-            logger.info(f"Looking for audiobook at: {output_file}")
+            # Construct the safe file path
+            file_name = f"{book_title} ({voice_name})"
+            output_dir = Path("/app/output")
+            file_path = output_dir / file_name
             
-            if not output_file.exists():
-                logger.error(f"Audio file not found at path: {output_file}")
-                raise HTTPException(404, "Audio file not found")
-            
-            return FileResponse(
-                path=output_file,
-                filename=output_file.name,
-                media_type="audio/x-m4b"
-            )
+            # Validate that the file_path is actually within the output directory (prevent path traversal)
+            try:
+                real_path = file_path.resolve()
+                output_dir_resolved = output_dir.resolve()
+                
+                if output_dir_resolved not in real_path.parents and output_dir_resolved != real_path:
+                    raise HTTPException(400, "Invalid file path")
+                
+                if not real_path.exists():
+                    raise HTTPException(404, "Audiobook file not found")
+                
+                return FileResponse(
+                    path=real_path,
+                    filename=f"{conversion.title}.m4a",
+                    media_type="audio/mp4"
+                )
+            except (ValueError, RuntimeError) as e:
+                raise HTTPException(400, f"Security error: {str(e)}")
 
         @self.app.get("/demo-voices")
         async def get_demo_voices():

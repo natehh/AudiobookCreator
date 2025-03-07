@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion
 from ..core.tts_service import TTSService
 from datetime import datetime, timedelta
+from ..utils.cleanup import sanitize_path
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -31,9 +32,22 @@ class AudiobookConverter:
         self.tts_service = TTSService()
 
     def sanitize_filename(self, filename):
-        valid_name = "".join(c for c in filename if c.isalnum() or c in "._- ").replace(" ", "_")
+        """
+        Sanitize a filename for safe use in file operations.
+        
+        Args:
+            filename: The filename to sanitize
+            
+        Returns:
+            A sanitized filename
+        """
+        # Use the common sanitize_path function
+        valid_name = sanitize_path(filename)
+        
+        # Ensure it has a .wav extension if needed
         if not valid_name.endswith('.wav'):
             valid_name += '.wav'
+            
         return valid_name
         
     async def cleanup(self):
