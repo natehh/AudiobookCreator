@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr
 import logging
 from datetime import datetime, timedelta, timezone
 from jose import jwt as jose_jwt
+from ...utils.rate_limit import auth_rate_limit
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -121,7 +122,8 @@ async def verify_auth(token: str = Depends(JWTBearer())):
 async def refresh_token(
     request: Request,
     response: Response,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(auth_rate_limit)  # Add rate limiting
 ):
     """Refresh an access token using a valid refresh token."""
     try:
@@ -171,7 +173,11 @@ async def refresh_token(
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 @auth_router.post("/request-magic-link")
-async def request_magic_link(request: MagicLinkRequest, db: Session = Depends(get_db)):
+async def request_magic_link(
+    request: MagicLinkRequest, 
+    db: Session = Depends(get_db),
+    _: bool = Depends(auth_rate_limit)  # Add rate limiting
+):
     try:
         create_magic_link(request.email, db)
         return {"message": "Magic link sent successfully"}
@@ -179,7 +185,11 @@ async def request_magic_link(request: MagicLinkRequest, db: Session = Depends(ge
         raise HTTPException(status_code=500, detail="Failed to send magic link")
 
 @auth_router.get("/verify-magic-link")
-async def verify_magic_link_route(token: str, db: Session = Depends(get_db)):
+async def verify_magic_link_route(
+    token: str,
+    db: Session = Depends(get_db),
+    _: bool = Depends(auth_rate_limit)  # Add rate limiting
+):
     try:
         # Log the token type for debugging
         try:

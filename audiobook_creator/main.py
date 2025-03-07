@@ -11,6 +11,7 @@ from .api.pricing.routes import pricing_router
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from .utils.cleanup import cleanup_expired_audiobooks
+from .utils.rate_limit import general_rate_limit
 import os
 
 # Load environment variables
@@ -45,6 +46,34 @@ app.mount("/static", StaticFiles(directory="audiobook_creator/static"), name="st
 scheduler = AsyncIOScheduler()
 scheduler.add_job(cleanup_expired_audiobooks, 'interval', hours=24, args=[next(get_db())])
 scheduler.start()
+
+# Add a middleware for global rate limiting (excluding static files)
+@app.middleware("http")
+async def global_rate_limiting(request: Request, call_next):
+    # Skip rate limiting for static files
+    if request.url.path.startswith("/static/"):
+        return await call_next(request)
+        
+    # Apply general rate limiting for API endpoints
+    # Note: We don't await the dependency directly because it would interfere with other routes
+    # that already have rate limiting applied.
+    
+    # Only check at this level if the route doesn't start with a path we're already
+    # checking in route-specific rate limiting (to avoid double-rate-limiting)
+    if not any(request.url.path.startswith(prefix) for prefix in ["/auth/", "/convert/", "/download/"]):
+        try:
+            await general_rate_limit(request)
+        except HTTPException as exc:
+            if exc.status_code == 429:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": exc.detail},
+                    headers=exc.headers
+                )
+            raise
+    
+    return await call_next(request)
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):

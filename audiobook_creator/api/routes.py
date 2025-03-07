@@ -16,6 +16,7 @@ from ..utils.email_utils import send_email
 from ..utils.file_validation import validate_file_upload, save_validated_file
 from .auth.tokens import JWTBearer, JWTHandler
 from ..utils.cleanup import sanitize_path
+from ..utils.rate_limit import conversion_rate_limit, general_rate_limit
 import re
 import logging
 from pydantic import BaseModel
@@ -82,7 +83,8 @@ class AudiobookAPI:
             payment_id: int = Form(...),
             token: str = Depends(JWTBearer()),
             output_dir: str = "output",
-            db: Session = Depends(get_db)
+            db: Session = Depends(get_db),
+            _: bool = Depends(conversion_rate_limit)  # Add rate limiting
         ):
             # Ensure tmp directory exists
             os.makedirs("tmp", exist_ok=True)
@@ -197,7 +199,8 @@ class AudiobookAPI:
         async def download_audiobook(
             conversion_id: str,
             token: str = Depends(JWTBearer()),
-            db: Session = Depends(get_db)
+            db: Session = Depends(get_db),
+            _: bool = Depends(general_rate_limit)  # Add rate limiting
         ):
             # Get user from token
             email = JWTHandler.verify_token(token)
