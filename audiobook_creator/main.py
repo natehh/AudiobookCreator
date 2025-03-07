@@ -50,8 +50,15 @@ scheduler.start()
 # Add a middleware for global rate limiting (excluding static files)
 @app.middleware("http")
 async def global_rate_limiting(request: Request, call_next):
-    # Skip rate limiting for static files
-    if request.url.path.startswith("/static/"):
+    # Skip rate limiting for static files and normal workflow paths
+    if request.url.path.startswith("/static/") or \
+       request.url.path.startswith("/api/payment") or \
+       request.url.path.startswith("/api/pricing") or \
+       request.url.path.startswith("/convert/") or \
+       request.url.path.startswith("/download/") or \
+       request.url.path.startswith("/auth/") or \
+       request.url.path == "/" or \
+       request.url.path == "/status/":
         return await call_next(request)
         
     # Apply general rate limiting for API endpoints
@@ -60,18 +67,17 @@ async def global_rate_limiting(request: Request, call_next):
     
     # Only check at this level if the route doesn't start with a path we're already
     # checking in route-specific rate limiting (to avoid double-rate-limiting)
-    if not any(request.url.path.startswith(prefix) for prefix in ["/auth/", "/convert/", "/download/"]):
-        try:
-            await general_rate_limit(request)
-        except HTTPException as exc:
-            if exc.status_code == 429:
-                from fastapi.responses import JSONResponse
-                return JSONResponse(
-                    status_code=429,
-                    content={"detail": exc.detail},
-                    headers=exc.headers
-                )
-            raise
+    try:
+        await general_rate_limit(request)
+    except HTTPException as exc:
+        if exc.status_code == 429:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={"detail": exc.detail},
+                headers=exc.headers
+            )
+        raise
     
     return await call_next(request)
 

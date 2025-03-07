@@ -12,7 +12,7 @@ from .models import ConversionStatus
 from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion, get_or_create_user, User, Payment, Usage
 from ..utils.ebook import get_book_metadata
-from ..utils.email_utils import send_email
+from ..utils.email_utils import send_email, send_conversion_confirmation
 from ..utils.file_validation import validate_file_upload, save_validated_file
 from .auth.tokens import JWTBearer, JWTHandler
 from ..utils.cleanup import sanitize_path
@@ -83,8 +83,7 @@ class AudiobookAPI:
             payment_id: int = Form(...),
             token: str = Depends(JWTBearer()),
             output_dir: str = "output",
-            db: Session = Depends(get_db),
-            _: bool = Depends(conversion_rate_limit)  # Add rate limiting
+            db: Session = Depends(get_db)
         ):
             # Ensure tmp directory exists
             os.makedirs("tmp", exist_ok=True)
@@ -177,6 +176,34 @@ class AudiobookAPI:
             db.add(usage)
             db.commit()
             
+            # Send confirmation email
+            try:
+                # Get the base URL from environment
+                base_url = os.getenv("BASE_URL")
+                if not base_url:
+                    # Fallback to constructing from request host
+                    # This assumes the app is running on a standard HTTP/HTTPS port
+                    host = os.getenv("APP_HOST", "localhost")
+                    port = os.getenv("APP_PORT", "8000")
+                    protocol = "https" if os.getenv("USE_HTTPS", "").lower() == "true" else "http"
+                    base_url = f"{protocol}://{host}"
+                    if (protocol == "http" and port != "80") or (protocol == "https" and port != "443"):
+                        base_url += f":{port}"
+                
+                # Send the confirmation email
+                background_tasks.add_task(
+                    send_conversion_confirmation,
+                    to=user_email,
+                    conversion_id=converter.conversion_id,
+                    book_title=book_metadata["title"],
+                    book_author=book_metadata["author"],
+                    payment_amount=payment.amount / 100 if payment.amount > 0 else 0,  # Convert cents to dollars
+                    base_url=base_url
+                )
+            except Exception as e:
+                # Log the error but don't fail the conversion
+                logging.error(f"Failed to send confirmation email: {str(e)}")
+            
             background_tasks.add_task(converter.convert)
             
             return status
@@ -199,8 +226,7 @@ class AudiobookAPI:
         async def download_audiobook(
             conversion_id: str,
             token: str = Depends(JWTBearer()),
-            db: Session = Depends(get_db),
-            _: bool = Depends(general_rate_limit)  # Add rate limiting
+            db: Session = Depends(get_db)
         ):
             # Get user from token
             email = JWTHandler.verify_token(token)

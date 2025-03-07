@@ -133,7 +133,7 @@ def rate_limit(
     
     return rate_limit_dependency
 
-# Commonly used rate limiters with increased limits for normal usage
-auth_rate_limit = rate_limit(max_requests=10, window=60)  # 10 requests per minute for auth endpoints (increased from 5)
-conversion_rate_limit = rate_limit(max_requests=10, window=300)  # 10 requests per 5 minutes for conversions (increased from 3)
-general_rate_limit = rate_limit(max_requests=120, window=60)  # 120 requests per minute for general endpoints (increased from 60) 
+# Commonly used rate limiters with dramatically increased limits for normal usage
+auth_rate_limit = rate_limit(max_requests=30, window=60)  # 30 requests per minute for auth endpoints (increased from 10)
+conversion_rate_limit = rate_limit(max_requests=20, window=300)  # 20 requests per 5 minutes for conversions (increased from 10)
+general_rate_limit = rate_limit(max_requests=240, window=60)  # 240 requests per minute for general endpoints (increased from 120) 
