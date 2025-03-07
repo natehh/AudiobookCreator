@@ -5,6 +5,7 @@ RUN echo "Installing system dependencies..."
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     sqlite3 \
+    libmagic-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN echo "pcm.!default { type null }" > /etc/asound.conf

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db, Conversion, get_or_create_user, User, Payment, Usage
 from ..utils.ebook import get_book_metadata
 from ..utils.email_utils import send_email
+from ..utils.file_validation import validate_file_upload, save_validated_file
 from .auth.tokens import JWTBearer, JWTHandler
 from ..utils.cleanup import sanitize_path
 import re
@@ -83,11 +84,18 @@ class AudiobookAPI:
             output_dir: str = "output",
             db: Session = Depends(get_db)
         ):
-            if not file.filename.endswith(('.epub', '.mobi', '.txt')):
-                raise HTTPException(400, "Unsupported file format")
+            # Ensure tmp directory exists
+            os.makedirs("tmp", exist_ok=True)
+            
+            # Validate file security
+            try:
+                await validate_file_upload(file)
+            except HTTPException as e:
+                logger.error(f"File validation failed: {e.detail}")
+                raise e
             
             # Get user from token
-            user_email = JWTHandler.verify_token(token)
+            user_email = JWTHandler.verify_token(token, check_type="access")
             user = get_or_create_user(db, {"email": user_email})
             
             # For free conversions (payment_id = 0), skip payment verification
@@ -117,9 +125,13 @@ class AudiobookAPI:
                 payment.status = 'succeeded'
                 db.commit()
             
-            temp_path = f"temp_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
-            with open(temp_path, "wb") as f:
-                f.write(await file.read())
+            # Generate a safe temporary file path with UUID
+            file_ext = os.path.splitext(file.filename)[1]
+            sanitized_filename = sanitize_path(file.filename)
+            temp_path = os.path.join("tmp", f"temp_{uuid.uuid4()}_{sanitized_filename}")
+            
+            # Save the file securely
+            await save_validated_file(file, temp_path)
             
             converter = AudiobookConverter(
                 temp_path, 
@@ -221,26 +233,56 @@ class AudiobookAPI:
             voice_name = voice_match.group(1) if voice_match else 'Unknown'
             voice_name = sanitize_path(voice_name)
             
-            # Construct the safe file path
-            file_name = f"{book_title} ({voice_name})"
+            # Construct the safe file path to the directory
+            dir_name = f"{book_title} ({voice_name})"
             output_dir = Path("/app/output")
-            file_path = output_dir / file_name
+            book_dir = output_dir / dir_name
             
-            # Validate that the file_path is actually within the output directory (prevent path traversal)
+            # Try multiple file pattern possibilities
+            possible_filenames = [
+                f"{book_title}.m4b",
+                f"{book_title} ({voice_name}).m4b",
+                f"{dir_name}.m4b"
+            ]
+            
+            m4b_file = None
+            for filename in possible_filenames:
+                possible_file = book_dir / filename
+                logger.info(f"Checking for file: {possible_file}")
+                if possible_file.exists():
+                    m4b_file = possible_file
+                    logger.info(f"Found m4b file: {m4b_file}")
+                    break
+            
+            # If no match with expected patterns, search for any .m4b file
+            if not m4b_file and book_dir.exists():
+                m4b_files = list(book_dir.glob("*.m4b"))
+                if m4b_files:
+                    m4b_file = m4b_files[0]
+                    logger.info(f"Found m4b file via glob: {m4b_file}")
+            
+            # Validate the file exists and is safe
+            if not m4b_file or not m4b_file.exists():
+                # Log details for debugging
+                logger.error(f"Could not find any m4b file")
+                logger.error(f"Directory exists: {book_dir.exists()}")
+                if book_dir.exists():
+                    logger.error(f"Contents of directory: {list(book_dir.iterdir())}")
+                raise HTTPException(404, "Audiobook file not found")
+            
+            # Validate that the file path is within the output directory (prevent path traversal)
             try:
-                real_path = file_path.resolve()
+                real_path = m4b_file.resolve()
                 output_dir_resolved = output_dir.resolve()
                 
-                if output_dir_resolved not in real_path.parents and output_dir_resolved != real_path:
+                if output_dir_resolved not in real_path.parents:
                     raise HTTPException(400, "Invalid file path")
                 
-                if not real_path.exists():
-                    raise HTTPException(404, "Audiobook file not found")
-                
+                logger.info(f"Serving audiobook file: {real_path}")
                 return FileResponse(
                     path=real_path,
-                    filename=f"{conversion.title}.m4a",
-                    media_type="audio/mp4"
+                    filename=f"{conversion.title}.m4b",
+                    media_type="audio/x-m4b"
                 )
             except (ValueError, RuntimeError) as e:
                 raise HTTPException(400, f"Security error: {str(e)}")

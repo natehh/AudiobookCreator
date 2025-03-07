@@ -161,6 +161,7 @@ class AudiobookConverter:
     def _create_m4b(self, book_dir, book_title, chapter_files):
         """Combine chapter files into single M4B with chapters and metadata."""
         output_file = os.path.join(book_dir, f"{book_title}.m4b")
+        logger.info(f"Creating M4B file at: {output_file}")
         
         combined = AudioSegment.empty()
         chapter_times = []
