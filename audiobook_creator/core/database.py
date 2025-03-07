@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, Enum, BigInteger, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, Enum, BigInteger, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 import logging
@@ -29,6 +29,19 @@ class User(Base):
     stripe_customer_id = Column(String, unique=True, nullable=True)
     payments = relationship("Payment", back_populates="user")
     usages = relationship("Usage", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+    
+    id = Column(Integer, primary_key=True)
+    token = Column(String, unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    is_revoked = Column(Boolean, default=False)
+    
+    user = relationship("User", back_populates="refresh_tokens")
 
 class Conversion(Base):
     __tablename__ = "conversions"

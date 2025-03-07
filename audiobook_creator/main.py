@@ -70,6 +70,7 @@ async def auth_middleware(request: Request, call_next):
         "/static/site.webmanifest",
         "/auth/verify",
         "/api/payment/webhook",
+        "/auth/refresh",  # Allow token refresh without authentication
     ]
     
     # Check exact matches first
@@ -81,8 +82,37 @@ async def auth_middleware(request: Request, call_next):
         return await call_next(request)
     
     # Check for authentication
-    token = request.cookies.get("access_token")
-    if not token or not token.startswith("Bearer "):
+    access_token = request.cookies.get("access_token")
+    if not access_token or not access_token.startswith("Bearer "):
+        # Try to refresh if refresh token exists
+        refresh_token = request.cookies.get("refresh_token")
+        if refresh_token and refresh_token.startswith("Bearer "):
+            try:
+                # Verify the refresh token
+                refresh_token_value = refresh_token.split(" ")[1]
+                email = JWTHandler.verify_token(refresh_token_value, check_type="refresh")
+                
+                # Generate a new access token
+                new_access_token = JWTHandler.create_access_token({"sub": email})
+                
+                # Create response with new access token
+                response = await call_next(request)
+                
+                # Add the new access token to response
+                response.set_cookie(
+                    key="access_token",
+                    value=f"Bearer {new_access_token}",
+                    httponly=True,
+                    max_age=3600,  # 1 hour
+                    secure=True,
+                    samesite="lax"
+                )
+                
+                return response
+            except HTTPException:
+                # If refresh token is invalid, continue to normal authentication flow
+                pass
+        
         # Only redirect GET requests to index.html
         if request.method == "GET":
             return RedirectResponse("/static/index.html")
@@ -90,12 +120,25 @@ async def auth_middleware(request: Request, call_next):
             raise HTTPException(status_code=401, detail="Authentication required")
     
     try:
-        JWTHandler.verify_token(token.split(" ")[1])
+        # Verify the access token
+        JWTHandler.verify_token(access_token.split(" ")[1], check_type="access")
     except HTTPException:
-        if request.method == "GET":
-            return RedirectResponse("/static/index.html")
+        # If access token is invalid but we have a refresh token, attempt to use it
+        refresh_token = request.cookies.get("refresh_token")
+        if refresh_token and refresh_token.startswith("Bearer "):
+            try:
+                # Redirect to refresh endpoint which will handle token renewal
+                return RedirectResponse("/auth/refresh", status_code=307)
+            except HTTPException:
+                if request.method == "GET":
+                    return RedirectResponse("/static/index.html")
+                else:
+                    raise HTTPException(status_code=401, detail="Invalid authentication")
         else:
-            raise HTTPException(status_code=401, detail="Invalid authentication")
+            if request.method == "GET":
+                return RedirectResponse("/static/index.html")
+            else:
+                raise HTTPException(status_code=401, detail="Invalid authentication")
     
     # If authenticated and trying to access root, redirect to create_conversion
     if request.url.path == "/":

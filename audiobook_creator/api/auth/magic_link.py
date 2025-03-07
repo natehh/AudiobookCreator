@@ -9,7 +9,7 @@ from ...utils.email_utils import send_email
 def create_magic_link(email: str, db: Session) -> str:
     try:
         # Generate a JWT token that expires in 15 minutes
-        token = JWTHandler.create_access_token({"sub": email, "type": "magic_link"})
+        token = JWTHandler.create_magic_link_token({"sub": email})
         
         # Send the magic link email
         send_magic_link(email, token)
