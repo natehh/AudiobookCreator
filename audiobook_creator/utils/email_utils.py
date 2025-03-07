@@ -78,7 +78,8 @@ def send_conversion_confirmation(
         if base_url.endswith('/'):
             base_url = base_url[:-1]
             
-        conversion_url = f"{base_url}/conversion/{conversion_id}"
+        # Fix: Pass conversion_id as a query parameter instead of a path parameter
+        conversion_url = f"{base_url}/conversion?id={conversion_id}"
         app_name = os.getenv("APP_NAME", "Audiobook Creator")
         
         # Create email subject
@@ -191,7 +192,7 @@ def send_conversion_confirmation(
                 <p>Thank you for using our service!</p>
                 
                 <div class="footer">
-                    <p>This is an automated message from {app_name}. Please do not reply to this email.</p>
+                    <p>This is an automated message from {app_name}. Please reply to this email if you have any questions, feedback, or issues.</p>
                 </div>
             </div>
         </body>

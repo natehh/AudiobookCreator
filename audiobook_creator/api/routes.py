@@ -197,7 +197,7 @@ class AudiobookAPI:
                     conversion_id=converter.conversion_id,
                     book_title=book_metadata["title"],
                     book_author=book_metadata["author"],
-                    payment_amount=payment.amount / 100 if payment.amount > 0 else 0,  # Convert cents to dollars
+                    payment_amount=payment.amount,  # Pass the amount directly, no conversion needed
                     base_url=base_url
                 )
             except Exception as e:
@@ -209,11 +209,16 @@ class AudiobookAPI:
             return status
         
         @self.app.get("/conversion/{conversion_id}")
-        async def conversion_page(conversion_id: str):
-            """Serve the conversion-specific page."""
+        async def conversion_page_path(conversion_id: str):
+            """Serve the conversion-specific page with ID in the path."""
             static_dir = Path(__file__).parent.parent / "static"
             return FileResponse(static_dir / "conversion.html")
-
+            
+        @self.app.get("/conversion")
+        async def conversion_page_query():
+            """Serve the conversion-specific page with ID in the query."""
+            static_dir = Path(__file__).parent.parent / "static"
+            return FileResponse(static_dir / "conversion.html")
 
         @self.app.get("/status/{conversion_id}", response_model=ConversionStatus)
         async def get_status(conversion_id: str):
