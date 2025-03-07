@@ -38,9 +38,11 @@ class AudiobookAPI:
     
     def _setup_middleware(self):
         """Configure CORS middleware."""
+        # Get allowed origins from environment or use a default
+        allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:8000').split(',')
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=allowed_origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],

@@ -26,10 +26,13 @@ initialize_db()
 # After creating the app but before running it
 populate_initial_data()
 
+# Get allowed origins from environment or use a default
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:8000').split(',')
+
 # Set up CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
