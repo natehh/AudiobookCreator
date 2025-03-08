@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from .api.routes import AudiobookAPI
 from .api.auth.routes import auth_router
 from .api.auth.tokens import JWTHandler
@@ -148,11 +148,12 @@ async def auth_middleware(request: Request, call_next):
                 # If refresh token is invalid, continue to normal authentication flow
                 pass
         
-        # Only redirect GET requests to index.html
-        if request.method == "GET":
+        # Redirect GET and HEAD requests to index.html
+        if request.method in ["GET", "HEAD"]:
             return RedirectResponse("/static/index.html")
         else:
-            raise HTTPException(status_code=401, detail="Authentication required")
+            # Return a proper response instead of raising an exception
+            return Response(status_code=401, headers={"WWW-Authenticate": "Bearer"}, content="Authentication required")
     
     try:
         # Verify the access token
@@ -165,15 +166,15 @@ async def auth_middleware(request: Request, call_next):
                 # Redirect to refresh endpoint which will handle token renewal
                 return RedirectResponse("/auth/refresh", status_code=307)
             except HTTPException:
-                if request.method == "GET":
+                if request.method in ["GET", "HEAD"]:
                     return RedirectResponse("/static/index.html")
                 else:
-                    raise HTTPException(status_code=401, detail="Invalid authentication")
+                    return Response(status_code=401, headers={"WWW-Authenticate": "Bearer"}, content="Invalid authentication")
         else:
-            if request.method == "GET":
+            if request.method in ["GET", "HEAD"]:
                 return RedirectResponse("/static/index.html")
             else:
-                raise HTTPException(status_code=401, detail="Invalid authentication")
+                return Response(status_code=401, headers={"WWW-Authenticate": "Bearer"}, content="Invalid authentication")
     
     # If authenticated and trying to access root, redirect to create_conversion
     if request.url.path == "/":
