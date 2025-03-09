@@ -10,7 +10,7 @@ from ..core.converter import AudiobookConverter
 from ..core.store import ConversionStore
 from .models import ConversionStatus
 from sqlalchemy.orm import Session
-from ..core.database import get_db, Conversion, get_or_create_user, User, Payment, Usage
+from ..core.database import get_db, Conversion, get_or_create_user, User, Payment, Usage, VoicePricing, VoiceTier
 from ..utils.ebook import get_book_metadata
 from ..utils.email_utils import send_email, send_conversion_confirmation
 from ..utils.file_validation import validate_file_upload, save_validated_file
@@ -102,6 +102,40 @@ class AudiobookAPI:
             # For free conversions (payment_id = 0), skip payment verification
             payment = None
             if payment_id == 0:
+                # SECURITY FIX: Verify this is actually a free voice
+                # Parse the voice_id to extract the actual voice identifier
+                try:
+                    import json
+                    voice_data = json.loads(voice_id)
+                    actual_voice_id = voice_data.get('voice_id', voice_id)
+                    
+                    # Check if the voice requires payment
+                    voice_pricing = db.query(VoicePricing).filter(
+                        VoicePricing.voice_id == actual_voice_id,
+                        VoicePricing.is_active == True
+                    ).join(VoiceTier).first()
+                    
+                    # If voice exists and has a price, it's not free
+                    if voice_pricing and voice_pricing.tier_info.price_per_char > 0:
+                        logger.warning(f"Attempt to use paid voice {actual_voice_id} with payment_id=0 by user {user_email}")
+                        raise HTTPException(
+                            status_code=400, 
+                            detail="Payment required for this voice. Please complete the payment process."
+                        )
+                except json.JSONDecodeError:
+                    # If voice_id is not in JSON format, check directly
+                    voice_pricing = db.query(VoicePricing).filter(
+                        VoicePricing.voice_id == voice_id,
+                        VoicePricing.is_active == True
+                    ).join(VoiceTier).first()
+                    
+                    if voice_pricing and voice_pricing.tier_info.price_per_char > 0:
+                        logger.warning(f"Attempt to use paid voice {voice_id} with payment_id=0 by user {user_email}")
+                        raise HTTPException(
+                            status_code=400, 
+                            detail="Payment required for this voice. Please complete the payment process."
+                        )
+                
                 # Create a free payment record for tracking
                 payment = Payment(
                     user_id=user.id,
