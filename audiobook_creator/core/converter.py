@@ -16,6 +16,7 @@ from ..core.database import get_db, Conversion
 from ..core.tts_service import TTSService
 from datetime import datetime, timedelta
 from ..utils.cleanup import sanitize_path
+import subprocess
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -163,45 +164,82 @@ class AudiobookConverter:
         output_file = os.path.join(book_dir, f"{book_title}.m4b")
         logger.info(f"Creating M4B file at: {output_file}")
         
-        combined = AudioSegment.empty()
+        # Create a temporary file listing all chapters for ffmpeg concat
+        concat_file = os.path.join(book_dir, "chapters.txt")
         chapter_times = []
         total_time = 0
         
-        for temp_file, title, duration in chapter_files:
-            chapter_times.append((total_time, title))
-            audio = AudioSegment.from_mp3(temp_file)
-            combined += audio
-            total_time += duration
-            os.remove(temp_file)
-        
-        # Export as M4B
-        combined.export(output_file, format='ipod')
-        
-        # Write ffmetadata file with chapters and global metadata
-        meta_file = os.path.join(book_dir, "ffmetadata.txt")
-        with open(meta_file, "w", encoding="utf-8") as f:
-            f.write(";FFMETADATA1\n")
-            f.write(f"title={book_title}\n")
-            if hasattr(self, 'author'):
-                f.write(f"artist={self.author}\n")
-            f.write("\n")
-            for i, (start, chap_title) in enumerate(chapter_times):
-                end = chapter_times[i+1][0] if i+1 < len(chapter_times) else total_time
-                f.write("[CHAPTER]\n")
-                f.write("TIMEBASE=1/1000\n")
-                f.write(f"START={start}\n")
-                f.write(f"END={end}\n")
-                f.write(f"title={chap_title}\n\n")
-        
-        # Use ffmpeg to embed chapters from the metadata file
-        temp_output = output_file + "_temp.m4b"
-        import subprocess
-        cmd = f'ffmpeg -y -i "{output_file}" -i "{meta_file}" -map_metadata 1 -codec copy "{temp_output}"'
-        result = subprocess.run(cmd, shell=True)
-        if result.returncode != 0:
-            logger.error("Failed to embed chapters with ffmpeg")
-        else:
-            os.replace(temp_output, output_file)
-        os.remove(meta_file)
-        
-        return output_file
+        try:
+            # Write the concat file for ffmpeg
+            with open(concat_file, "w", encoding="utf-8") as f:
+                for temp_file, title, duration in chapter_files:
+                    # Store chapter timing info
+                    chapter_times.append((total_time, title))
+                    # Write file entry in ffmpeg concat format
+                    f.write(f"file '{os.path.abspath(temp_file)}'\n")
+                    total_time += duration
+            
+            # Write ffmetadata file with chapters and global metadata
+            meta_file = os.path.join(book_dir, "ffmetadata.txt")
+            with open(meta_file, "w", encoding="utf-8") as f:
+                f.write(";FFMETADATA1\n")
+                f.write(f"title={book_title}\n")
+                if hasattr(self, 'author'):
+                    f.write(f"artist={self.author}\n")
+                f.write("\n")
+                
+                for i, (start, chap_title) in enumerate(chapter_times):
+                    end = chapter_times[i+1][0] if i+1 < len(chapter_times) else total_time
+                    f.write("[CHAPTER]\n")
+                    f.write("TIMEBASE=1/1000\n")
+                    f.write(f"START={start}\n")
+                    f.write(f"END={end}\n")
+                    f.write(f"title={chap_title}\n\n")
+            
+            # Use ffmpeg to concatenate files and convert to AAC audio in M4B container
+            # -c:a aac: Use the AAC encoder for audio
+            # -b:a 64k: Set audio bitrate (adjust as needed for quality/size balance)
+            # -ar 44100: Set sample rate to 44.1kHz (standard for audiobooks)
+            # -ac 2: Convert to stereo
+            cmd = (
+                f'ffmpeg -y -f concat -safe 0 -i "{concat_file}" '
+                f'-i "{meta_file}" -map_metadata 1 '
+                f'-c:a aac -b:a 64k -ar 44100 -ac 2 "{output_file}"'
+            )
+            
+            logger.info("Starting FFmpeg processing...")
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                error_msg = f"FFmpeg failed: {result.stderr}"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            
+            logger.info("FFmpeg processing completed successfully")
+            
+            # Clean up chapter files and temporary files
+            for temp_file, _, _ in chapter_files:
+                try:
+                    os.remove(temp_file)
+                except OSError as e:
+                    logger.warning(f"Failed to remove temporary file {temp_file}: {e}")
+            
+            # Clean up metadata and concat files
+            for cleanup_file in [meta_file, concat_file]:
+                try:
+                    os.remove(cleanup_file)
+                except OSError as e:
+                    logger.warning(f"Failed to remove temporary file {cleanup_file}: {e}")
+            
+            return output_file
+            
+        except Exception as e:
+            logger.error(f"Error during M4B creation: {str(e)}", exc_info=True)
+            # Clean up any temporary files that might exist
+            for file in [concat_file, meta_file, output_file]:
+                if os.path.exists(file):
+                    try:
+                        os.remove(file)
+                    except OSError:
+                        pass
+            raise
