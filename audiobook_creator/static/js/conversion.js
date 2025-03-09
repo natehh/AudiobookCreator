@@ -1,39 +1,6 @@
 const API_URL = '';
 let ws;
 
-function initializeConversion() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const conversionId = urlParams.get('id');
-    if (!conversionId) {
-        window.location.href = '/static/create_conversion.html';
-        return;
-    }
-
-    fetchConversionState();
-    setupWebSocket(conversionId);
-}
-
-async function fetchConversionState() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const conversionId = urlParams.get('id');
-    
-    try {
-        const response = await fetch(`${API_URL}/status/${conversionId}`, {
-            credentials: 'include'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch conversion state');
-        }
-        
-        const data = await response.json();
-        updateConversionUI(data);
-    } catch (error) {
-        document.getElementById('error-message').textContent = `Error: ${error.message}`;
-        document.getElementById('error-message').style.display = 'block';
-    }
-}
-
 function setupWebSocket(conversionId) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/${conversionId}`;

@@ -182,6 +182,7 @@
         }
     </style>
     <script src="/static/js/common.js"></script>
+    <script src="/static/js/conversion.js"></script>
 </head>
 <body>
     <nav>
@@ -228,88 +229,79 @@
                 }
 
                 const conversion = await response.json();
-                // Handle UTC dates properly
-                const now = new Date();
-                const expiration = conversion.expiration_date ? new Date(conversion.expiration_date) : null;
-                const isExpired = expiration ? expiration < now : false;
-                const timeRemaining = expiration ? formatTimeLeft(expiration) : '';
+                updateConversionUI(conversion);
                 
-                document.getElementById('conversionInfo').innerHTML = `
-                    <div class="detail-row">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${conversion.title}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Author</div>
-                        <div class="detail-value">${conversion.author}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Voice</div>
-                        <div class="detail-value">${conversion.voice ? conversion.voice : 'Unknown'}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">
-                            <span class="status-badge status-${conversion.status.toLowerCase()}">${conversion.status}</span>
-                        </div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Progress</div>
-                        <div class="detail-value">
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${conversion.progress * 100}%"></div>
-                            </div>
-                            ${Math.round(conversion.progress * 100)}%
-                        </div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Created</div>
-                        <div class="detail-value">${new Date(conversion.created_at).toLocaleString()}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Expiration</div>
-                        <div class="detail-value ${isExpired ? 'expired' : ''}">
-                            ${expiration ? 
-                                `${expiration.toLocaleString()}
-                                <div class="expiration-time">${timeRemaining}</div>` : 
-                                'No expiration set'}
-                        </div>
-                    </div>
-                    ${conversion.status === 'completed' && !isExpired ? 
-                        `<a href="/download/${conversion.id}" class="button" download>Download Audiobook</a>` : 
-                        ''}
-                `;
-
-                // Set up periodic updates for time remaining
-                if (expiration && !isExpired) {
-                    const updateTimeRemaining = () => {
-                        const expirationElement = document.querySelector('.expiration-time');
-                        if (expirationElement) {
-                            const newTimeRemaining = formatTimeLeft(expiration);
-                            if (newTimeRemaining === '(Expired)') {
-                                expirationElement.parentElement.classList.add('expired');
-                                const downloadButton = document.querySelector('.button');
-                                if (downloadButton) {
-                                    downloadButton.style.display = 'none';
-                                }
-                                clearInterval(updateInterval);
-                            }
-                            expirationElement.textContent = newTimeRemaining;
-                        }
-                    };
-                    const updateInterval = setInterval(updateTimeRemaining, 10000);
-                }
-
-                if (conversion.status !== 'completed' && conversion.status !== 'failed') {
-                    setTimeout(loadConversionDetails, 5000);
-                }
+                // Set up WebSocket after initial load
+                setupWebSocket(conversionId);
             } catch (error) {
                 document.getElementById('conversionInfo').innerHTML = `
                     <div style="color: #ff6b6b; text-align: center; padding: 2rem;">
                         Error loading conversion details. Please try again later.
                     </div>
                 `;
-                setTimeout(loadConversionDetails, 5000);
+            }
+        }
+
+        function updateConversionUI(conversion) {
+            // Handle UTC dates properly
+            const now = new Date();
+            const expiration = conversion.expiration_date ? new Date(conversion.expiration_date) : null;
+            const isExpired = expiration ? expiration < now : false;
+            const timeRemaining = expiration ? formatTimeLeft(expiration) : '';
+            
+            document.getElementById('conversionInfo').innerHTML = `
+                <div class="detail-row">
+                    <div class="detail-label">Title</div>
+                    <div class="detail-value">${conversion.title}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Author</div>
+                    <div class="detail-value">${conversion.author}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Voice</div>
+                    <div class="detail-value">${conversion.voice ? conversion.voice : 'Unknown'}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">
+                        <span class="status-badge status-${conversion.status.toLowerCase()}">${conversion.status}</span>
+                    </div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Progress</div>
+                    <div class="detail-value">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${conversion.progress * 100}%"></div>
+                        </div>
+                        ${Math.round(conversion.progress * 100)}%
+                    </div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Created</div>
+                    <div class="detail-value">${new Date(conversion.created_at).toLocaleString()}</div>
+                </div>
+                ${expiration ? `
+                <div class="detail-row ${isExpired ? 'expired' : ''}">
+                    <div class="detail-label">Expires</div>
+                    <div class="detail-value">
+                        <span class="expiration-time" data-expiration="${conversion.expiration_date}">${timeRemaining}</span>
+                    </div>
+                </div>
+                ` : ''}
+                ${conversion.status === 'completed' && !isExpired ? `
+                <div class="detail-row">
+                    <div class="detail-label">Download</div>
+                    <div class="detail-value">
+                        <a href="/download/${conversion.id}" class="button" download>Download Audiobook</a>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            // Update expiration time every minute
+            if (expiration && !isExpired) {
+                setInterval(updateExpirationTime, 60000);
             }
         }
 
