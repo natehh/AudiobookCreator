@@ -196,17 +196,15 @@ class AudiobookConverter:
                     f.write(f"END={end}\n")
                     f.write(f"title={chap_title}\n\n")
             
-            # Create intermediate MP4 file with AAC audio
-            # -c:a libfdk_aac: Use the more efficient FDK AAC encoder if available, fallback to native AAC
-            # -vn: No video
-            # -movflags +faststart: Optimize for streaming
-            # Keep original sample rate and channels
-            temp_m4b = output_file + ".temp.m4b"
+            # Use ffmpeg to concatenate files and convert to AAC audio in M4B container
+            # -c:a aac: Use the AAC encoder for audio
+            # -b:a 64k: Set audio bitrate (adjust as needed for quality/size balance)
+            # -ar 44100: Set sample rate to 44.1kHz (standard for audiobooks)
+            # -ac 2: Convert to stereo
             cmd = (
                 f'ffmpeg -y -f concat -safe 0 -i "{concat_file}" '
-                f'-vn -c:a aac -b:a 64k -movflags +faststart "{temp_m4b}" && '
-                f'ffmpeg -y -i "{temp_m4b}" -i "{meta_file}" '
-                f'-map_metadata 1 -codec copy "{output_file}"'
+                f'-i "{meta_file}" -map_metadata 1 '
+                f'-c:a aac -b:a 64k -ar 44100 -ac 2 "{output_file}"'
             )
             
             logger.info("Starting FFmpeg processing...")
@@ -219,15 +217,17 @@ class AudiobookConverter:
             
             logger.info("FFmpeg processing completed successfully")
             
-            # Clean up all temporary files
-            cleanup_files = [temp_m4b] if os.path.exists(temp_m4b) else []
-            cleanup_files.extend([f for f, _, _ in chapter_files])
-            cleanup_files.extend([meta_file, concat_file])
-            
-            for cleanup_file in cleanup_files:
+            # Clean up chapter files and temporary files
+            for temp_file, _, _ in chapter_files:
                 try:
-                    if os.path.exists(cleanup_file):
-                        os.remove(cleanup_file)
+                    os.remove(temp_file)
+                except OSError as e:
+                    logger.warning(f"Failed to remove temporary file {temp_file}: {e}")
+            
+            # Clean up metadata and concat files
+            for cleanup_file in [meta_file, concat_file]:
+                try:
+                    os.remove(cleanup_file)
                 except OSError as e:
                     logger.warning(f"Failed to remove temporary file {cleanup_file}: {e}")
             
@@ -236,8 +236,7 @@ class AudiobookConverter:
         except Exception as e:
             logger.error(f"Error during M4B creation: {str(e)}", exc_info=True)
             # Clean up any temporary files that might exist
-            cleanup_files = [concat_file, meta_file, output_file, temp_m4b]
-            for file in cleanup_files:
+            for file in [concat_file, meta_file, output_file]:
                 if os.path.exists(file):
                     try:
                         os.remove(file)
