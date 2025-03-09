@@ -97,41 +97,74 @@ async def calculate_price(
 
 @pricing_router.post("/payment/create-intent")
 async def create_payment_intent(
-    payment: PaymentIntentCreate,
+    file: UploadFile = File(...),
+    voice_id: str = Form(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create a payment intent for the specified amount."""
+    """Create a payment intent based on file and voice selection."""
     try:
-        # Convert amount to cents for Stripe
-        amount_cents = int(payment.amount * 100)
+        # Calculate price using same logic as /pricing/calculate
+        voice_id = urllib.parse.unquote(voice_id)
+        voice_data = json.loads(voice_id)
+        if not isinstance(voice_data, dict) or 'price_per_char' not in voice_data or 'voice_id' not in voice_data:
+            raise HTTPException(400, "Invalid voice data format")
+            
+        price_per_char = float(voice_data['price_per_char'])
         
-        # Create or get Stripe customer
-        if not current_user.stripe_customer_id:
-            customer = await StripeService.create_customer(current_user.email)
-            current_user.stripe_customer_id = customer.id
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file.filename[file.filename.rfind('.'):]) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_path = temp_file.name
+
+        try:
+            # Calculate price using same method as pricing/calculate
+            chapters = get_chapters(Path(temp_path))
+            char_count = sum(len(content) for _, content in chapters)
+            total_price = char_count * price_per_char
+            
+            # Enforce minimum payment of $0.50
+            if total_price > 0:
+                total_price = max(total_price, 0.50)
+            
+            # Convert amount to cents for Stripe
+            amount_cents = int(total_price * 100)
+            
+            # Create or get Stripe customer
+            if not current_user.stripe_customer_id:
+                customer = await StripeService.create_customer(current_user.email)
+                current_user.stripe_customer_id = customer.id
+                db.commit()
+            
+            # Create payment intent
+            intent = await StripeService.create_payment_intent(
+                amount_cents=amount_cents,
+                customer_id=current_user.stripe_customer_id
+            )
+            
+            # Create payment record
+            payment = Payment(
+                user_id=current_user.id,
+                amount=total_price,
+                stripe_payment_intent_id=intent.id,
+                status='pending'
+            )
+            db.add(payment)
             db.commit()
-        
-        # Create payment intent
-        intent = await StripeService.create_payment_intent(
-            amount_cents=amount_cents,
-            customer_id=current_user.stripe_customer_id
-        )
-        
-        # Create payment record
-        payment = Payment(
-            user_id=current_user.id,
-            amount=payment.amount,
-            stripe_payment_intent_id=intent.id,
-            status='pending'
-        )
-        db.add(payment)
-        db.commit()
-        
-        return {
-            "clientSecret": intent.client_secret,
-            "payment_id": payment.id
-        }
+            
+            return {
+                "clientSecret": intent.client_secret,
+                "payment_id": payment.id
+            }
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_path)
+            
+    except json.JSONDecodeError:
+        raise HTTPException(400, "Invalid voice selection format")
+    except ValueError as e:
+        raise HTTPException(400, f"Invalid price format: {str(e)}")
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))

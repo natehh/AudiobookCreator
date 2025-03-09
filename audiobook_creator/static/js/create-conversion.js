@@ -175,7 +175,11 @@ async function updatePricing() {
 
     const formData = new FormData();
     formData.append('file', currentFile);
-    formData.append('voice_id', encodeURIComponent(select.value));
+    const voiceData = JSON.parse(select.value);
+    formData.append('voice_id', JSON.stringify({
+        voice_id: voiceData.voice_id,
+        price_per_char: voiceData.price_per_char
+    }));
 
     try {
         const response = await fetch('/api/pricing/calculate', {
@@ -282,15 +286,18 @@ async function startConversion() {
         const adjustedPrice = totalPrice < 0.50 ? 0.50 : totalPrice;
 
         // Create payment intent
+        const formData = new FormData();
+        formData.append('file', currentFile);
+        const voiceData = JSON.parse(select.value);
+        formData.append('voice_id', JSON.stringify({
+            voice_id: voiceData.voice_id,
+            price_per_char: voiceData.price_per_char
+        }));
+        
         const response = await fetch('/api/payment/create-intent', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                amount: adjustedPrice
-            })
+            body: formData,
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -340,10 +347,6 @@ async function startConversion() {
         }
 
         // If payment successful, start the conversion
-        const formData = new FormData();
-        formData.append('file', currentFile);
-        const voiceData = JSON.parse(select.value);
-        formData.append('voice_id', voiceData.voice_id);
         formData.append('payment_id', payment_id);
 
         const conversionResponse = await fetch(`${API_URL}/convert/`, {

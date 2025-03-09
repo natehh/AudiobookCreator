@@ -21,6 +21,7 @@ import re
 import logging
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,6 @@ class AudiobookAPI:
                 # SECURITY FIX: Verify this is actually a free voice
                 # Parse the voice_id to extract the actual voice identifier
                 try:
-                    import json
                     voice_data = json.loads(voice_id)
                     actual_voice_id = voice_data.get('voice_id', voice_id)
                     
@@ -168,11 +168,18 @@ class AudiobookAPI:
             # Save the file securely
             await save_validated_file(file, temp_path)
             
+            # Parse voice_id if it's a JSON string
+            try:
+                voice_data = json.loads(voice_id)
+                actual_voice_id = voice_data.get('voice_id', voice_id)
+            except (json.JSONDecodeError, TypeError):
+                actual_voice_id = voice_id
+
             converter = AudiobookConverter(
                 temp_path, 
                 output_dir, 
                 self.store,
-                voice_id
+                actual_voice_id  # Use the extracted voice_id
             )
             
             status = ConversionStatus(
@@ -195,7 +202,7 @@ class AudiobookAPI:
                 input_size=os.path.getsize(temp_path),
                 status="processing",
                 progress=0.0,
-                voice_id=voice_id,
+                voice_id=actual_voice_id,  # Use the extracted voice_id
                 expiration_date=datetime.now(timezone.utc) + timedelta(hours=24)
             )
             db.add(conversion)
