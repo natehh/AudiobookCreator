@@ -165,7 +165,7 @@ class AudiobookConverter:
         logger.info(f"Creating M4B file at: {output_file}")
         
         # Settings for batch processing
-        BATCH_SIZE = 5  # Number of chapters to process at once
+        BATCH_SIZE = 2  # Number of chapters to process at once
         chapter_times = []
         total_time = 0
         batch_files = []  # Keep track of intermediate files
