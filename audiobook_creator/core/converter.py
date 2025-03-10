@@ -16,6 +16,7 @@ from ..core.database import get_db, Conversion
 from ..core.tts_service import TTSService
 from datetime import datetime, timedelta
 from ..utils.cleanup import sanitize_path
+import subprocess
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -163,45 +164,104 @@ class AudiobookConverter:
         output_file = os.path.join(book_dir, f"{book_title}.m4b")
         logger.info(f"Creating M4B file at: {output_file}")
         
-        combined = AudioSegment.empty()
+        # Settings for batch processing
+        BATCH_SIZE = 5  # Number of chapters to process at once
         chapter_times = []
         total_time = 0
+        batch_files = []  # Keep track of intermediate files
         
-        for temp_file, title, duration in chapter_files:
-            chapter_times.append((total_time, title))
-            audio = AudioSegment.from_mp3(temp_file)
-            combined += audio
-            total_time += duration
-            os.remove(temp_file)
-        
-        # Export as M4B
-        combined.export(output_file, format='ipod')
-        
-        # Write ffmetadata file with chapters and global metadata
-        meta_file = os.path.join(book_dir, "ffmetadata.txt")
-        with open(meta_file, "w", encoding="utf-8") as f:
-            f.write(";FFMETADATA1\n")
-            f.write(f"title={book_title}\n")
-            if hasattr(self, 'author'):
-                f.write(f"artist={self.author}\n")
-            f.write("\n")
-            for i, (start, chap_title) in enumerate(chapter_times):
-                end = chapter_times[i+1][0] if i+1 < len(chapter_times) else total_time
-                f.write("[CHAPTER]\n")
-                f.write("TIMEBASE=1/1000\n")
-                f.write(f"START={start}\n")
-                f.write(f"END={end}\n")
-                f.write(f"title={chap_title}\n\n")
-        
-        # Use ffmpeg to embed chapters from the metadata file
-        temp_output = output_file + "_temp.m4b"
-        import subprocess
-        cmd = f'ffmpeg -y -i "{output_file}" -i "{meta_file}" -map_metadata 1 -codec copy "{temp_output}"'
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        if result.returncode != 0:
-            logger.error("Failed to embed chapters with ffmpeg")
-        else:
-            os.replace(temp_output, output_file)
-        os.remove(meta_file)
-        
-        return output_file
+        try:
+            # Process chapters in batches
+            for batch_index in range(0, len(chapter_files), BATCH_SIZE):
+                batch = chapter_files[batch_index:batch_index + BATCH_SIZE]
+                logger.info(f"Processing batch {batch_index//BATCH_SIZE + 1} of {(len(chapter_files) + BATCH_SIZE - 1)//BATCH_SIZE}")
+                
+                # Process batch
+                combined = AudioSegment.empty()
+                batch_start_time = total_time
+                
+                for temp_file, title, duration in batch:
+                    # Store chapter timing info
+                    chapter_times.append((total_time, title))
+                    # Load and combine audio
+                    audio = AudioSegment.from_mp3(temp_file)
+                    combined += audio
+                    total_time += duration
+                    # Clean up original file
+                    os.remove(temp_file)
+                
+                # Export batch to intermediate file
+                batch_file = os.path.join(book_dir, f"batch_{batch_index//BATCH_SIZE}.m4b")
+                combined.export(batch_file, format='ipod')
+                batch_files.append(batch_file)
+                
+                # Clear memory
+                combined = None
+                audio = None
+            
+            # Create concat file for intermediate files
+            concat_file = os.path.join(book_dir, "concat.txt")
+            with open(concat_file, "w", encoding="utf-8") as f:
+                for batch_file in batch_files:
+                    f.write(f"file '{os.path.abspath(batch_file)}'\n")
+            
+            # Write final metadata file with all chapters
+            meta_file = os.path.join(book_dir, "ffmetadata.txt")
+            with open(meta_file, "w", encoding="utf-8") as f:
+                f.write(";FFMETADATA1\n")
+                f.write(f"title={book_title}\n")
+                if hasattr(self, 'author'):
+                    f.write(f"artist={self.author}\n")
+                f.write("\n")
+                
+                for i, (start, chap_title) in enumerate(chapter_times):
+                    end = chapter_times[i+1][0] if i+1 < len(chapter_times) else total_time
+                    f.write("[CHAPTER]\n")
+                    f.write("TIMEBASE=1/1000\n")
+                    f.write(f"START={start}\n")
+                    f.write(f"END={end}\n")
+                    f.write(f"title={chap_title}\n\n")
+            
+            # Combine all batches using ffmpeg concat
+            logger.info("Combining all batches...")
+            concat_cmd = (
+                f'ffmpeg -y -f concat -safe 0 -i "{concat_file}" '
+                f'-codec copy "{output_file}"'
+            )
+            result = subprocess.run(concat_cmd, shell=True, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"Failed to combine batches: {result.stderr}")
+                raise RuntimeError("Failed to combine batches")
+            
+            # Add metadata and chapters
+            temp_output = output_file + "_temp.m4b"
+            metadata_cmd = f'ffmpeg -y -i "{output_file}" -i "{meta_file}" -map_metadata 1 -codec copy "{temp_output}"'
+            result = subprocess.run(metadata_cmd, shell=True, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to add metadata: {result.stderr}")
+                raise RuntimeError("Failed to add metadata")
+            else:
+                os.replace(temp_output, output_file)
+            
+            # Clean up intermediate files
+            for file in batch_files + [concat_file, meta_file]:
+                try:
+                    if os.path.exists(file):
+                        os.remove(file)
+                except OSError as e:
+                    logger.warning(f"Failed to remove temporary file {file}: {e}")
+            
+            return output_file
+            
+        except Exception as e:
+            logger.error(f"Error during M4B creation: {str(e)}", exc_info=True)
+            # Clean up any temporary files that might exist
+            cleanup_files = batch_files + [concat_file, meta_file, output_file, temp_output]
+            for file in cleanup_files:
+                try:
+                    if os.path.exists(file):
+                        os.remove(file)
+                except OSError:
+                    pass
+            raise
