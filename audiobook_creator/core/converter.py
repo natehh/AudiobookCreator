@@ -197,7 +197,7 @@ class AudiobookConverter:
         temp_output = output_file + "_temp.m4b"
         import subprocess
         cmd = f'ffmpeg -y -i "{output_file}" -i "{meta_file}" -map_metadata 1 -codec copy "{temp_output}"'
-        result = subprocess.run(cmd, shell=True)
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
             logger.error("Failed to embed chapters with ffmpeg")
         else:
