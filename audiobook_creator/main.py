@@ -199,3 +199,18 @@ app.include_router(pricing_router, prefix="/api", tags=["pricing"])
 @app.get("/")
 async def root():
     return RedirectResponse("/static/index.html")
+
+# SEO routes
+@app.get("/robots.txt", response_class=Response)
+async def robots_txt():
+    """Serve robots.txt for search engine crawlers."""
+    with open("audiobook_creator/static/robots.txt", "r") as f:
+        content = f.read()
+    return Response(content=content, media_type="text/plain")
+
+@app.get("/sitemap.xml", response_class=Response)
+async def sitemap_xml():
+    """Serve sitemap.xml for search engine crawlers."""
+    with open("audiobook_creator/static/sitemap.xml", "r") as f:
+        content = f.read()
+    return Response(content=content, media_type="application/xml")

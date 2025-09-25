@@ -1,0 +1,29 @@
+User-agent: *
+Allow: /
+
+# Important pages for crawling
+Allow: /static/index.html
+Allow: /static/pricing.html
+Allow: /static/js/
+Allow: /static/android-chrome-192x192.png
+Allow: /static/android-chrome-512x512.png
+Allow: /static/apple-touch-icon.png
+Allow: /static/favicon-16x16.png
+Allow: /static/favicon-32x32.png
+Allow: /static/favicon.ico
+Allow: /static/headphones-icon.svg
+Allow: /static/site.webmanifest
+
+# Block sensitive areas
+Disallow: /api/
+Disallow: /auth/
+Disallow: /static/account.html
+Disallow: /static/conversion.html
+Disallow: /static/create_conversion.html
+Disallow: /static/payment.html
+Disallow: /tmp/
+Disallow: /output/
+Disallow: /data/
+
+# Sitemap location
+Sitemap: https://audiobookcreator.io/static/sitemap.xml
