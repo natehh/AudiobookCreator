@@ -188,7 +188,7 @@
     <nav>
         <a href="/" class="logo">Audiobook Creator</a>
         <div class="nav-buttons">
-            <a href="/static/account.html" class="nav-button">Account</a>
+            <a href="/account" class="nav-button">Account</a>
         </div>
     </nav>
 
@@ -207,7 +207,7 @@
             const conversionId = urlParams.get('id');
             
             if (!conversionId) {
-                window.location.href = '/static/account.html';
+                window.location.href = '/account';
                 return;
             }
 

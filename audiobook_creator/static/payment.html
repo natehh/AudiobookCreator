@@ -293,7 +293,7 @@
 
                 showMessage('Payment method added successfully', 'success');
                 setTimeout(() => {
-                    window.location.href = '/static/account.html';
+                    window.location.href = '/account';
                 }, 1500);
             } catch (error) {
                 showMessage('Error saving payment method: ' + error.message, 'error');
@@ -313,17 +313,17 @@
                 
                 if (isAuthenticated) {
                     navButtons.innerHTML = `
-                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
-                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
-                        <a href="/static/account.html" class="nav-button">Account</a>
+                        <a href="/create" class="nav-button">Create audiobook</a>
+                        <a href="/pricing" class="nav-button">Pricing</a>
+                        <a href="/account" class="nav-button">Account</a>
                         <a href="#" class="nav-button" onclick="logout()">Logout</a>
                     `;
                 } else {
-                    window.location.href = '/static/index.html';
+                    window.location.href = '/';
                 }
             } catch (error) {
                 console.error('Error checking authentication:', error);
-                window.location.href = '/static/index.html';
+                window.location.href = '/';
             }
         }
 

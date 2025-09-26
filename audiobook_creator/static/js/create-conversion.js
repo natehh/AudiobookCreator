@@ -278,7 +278,7 @@ async function startConversion() {
             }
 
             const data = await conversionResponse.json();
-            window.location.href = `/static/conversion.html?id=${data.id}`;
+            window.location.href = `/conversion?id=${data.id}`;
             return;
         }
 
@@ -320,7 +320,7 @@ async function startConversion() {
 
         if (!paymentMethods || paymentMethods.length === 0) {
             // Redirect to payment method page if no payment method is available
-            window.location.href = '/static/payment.html';
+            window.location.href = '/payment';
             return;
         }
 
@@ -361,7 +361,7 @@ async function startConversion() {
         }
 
         const data = await conversionResponse.json();
-        window.location.href = `/static/conversion.html?id=${data.id}`;
+        window.location.href = `/conversion?id=${data.id}`;
     } catch (error) {
         console.error('Error in startConversion:', error);
         errorText.textContent = `Error: ${error.message}`;

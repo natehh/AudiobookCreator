@@ -12,14 +12,14 @@
     </url>
     
     <url>
-        <loc>https://audiobookcreator.io/static/pricing.html</loc>
+        <loc>https://audiobookcreator.io/pricing</loc>
         <lastmod>2025-09-25</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     
     <url>
-        <loc>https://audiobookcreator.io/static/blog.html</loc>
+        <loc>https://audiobookcreator.io/blog</loc>
         <lastmod>2025-09-25</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.7</priority>

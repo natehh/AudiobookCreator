@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, FileResponse
 from .api.routes import AudiobookAPI
 from .api.auth.routes import auth_router
 from .api.auth.tokens import JWTHandler
@@ -13,6 +13,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from .utils.cleanup import cleanup_expired_audiobooks
 from .utils.rate_limit import general_rate_limit
 import os
+from pathlib import Path
 
 # Load environment variables
 load_dotenv()
@@ -20,6 +21,19 @@ load_dotenv()
 # Initialize the main FastAPI application
 api = AudiobookAPI()
 app = api.app
+
+# Static directory references
+STATIC_DIR = Path(__file__).parent / "static"
+PUBLIC_HTML_PATHS = {"/", "/pricing", "/blog"}
+AUTH_REQUIRED_HTML_PATHS = {"/create", "/conversion", "/account", "/payment"}
+HTML_PAGE_PATHS = PUBLIC_HTML_PATHS | AUTH_REQUIRED_HTML_PATHS
+
+# Helper for serving static HTML files via clean routes
+def html_response(filename: str) -> FileResponse:
+    file_path = STATIC_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Page not found")
+    return FileResponse(file_path, media_type="text/html")
 
 # Initialize database
 initialize_db()
@@ -51,14 +65,16 @@ scheduler.start()
 @app.middleware("http")
 async def global_rate_limiting(request: Request, call_next):
     # Skip rate limiting for static files and normal workflow paths
-    if request.url.path.startswith("/static/") or \
-       request.url.path.startswith("/api/payment") or \
-       request.url.path.startswith("/api/pricing") or \
-       request.url.path.startswith("/convert/") or \
-       request.url.path.startswith("/download/") or \
-       request.url.path.startswith("/auth/") or \
-       request.url.path == "/" or \
-       request.url.path == "/status/":
+    path = request.url.path.rstrip("/") or "/"
+
+    if path.startswith("/static/") or \
+       path.startswith("/api/payment") or \
+       path.startswith("/api/pricing") or \
+       path.startswith("/convert/") or \
+       path.startswith("/download/") or \
+       path.startswith("/auth/") or \
+       path in PUBLIC_HTML_PATHS or \
+       path == "/status":
         return await call_next(request)
         
     # Apply general rate limiting for API endpoints
@@ -84,15 +100,13 @@ async def global_rate_limiting(request: Request, call_next):
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     # Paths that don't require authentication
-    public_paths = [
-        "/static/index.html",
+    public_paths = {
         "/auth/login/google",
         "/auth/callback/google",
         "/auth/request-magic-link",
         "/auth/verify-magic-link",
         "/favicon.ico",
         "/demo-voices",
-        "/static/pricing.html",
         "/api/pricing/voices",
         "/static/js/demo-player.js",
         "/static/js/common.js",
@@ -106,14 +120,18 @@ async def auth_middleware(request: Request, call_next):
         "/auth/verify",
         "/api/payment/webhook",
         "/auth/refresh",  # Allow token refresh without authentication
-    ]
+        "/robots.txt",
+        "/sitemap.xml",
+    }
+    path = request.url.path.rstrip("/") or "/"
+    public_paths.update(PUBLIC_HTML_PATHS)
     
     # Check exact matches first
-    if request.url.path in public_paths:
+    if path in public_paths:
         return await call_next(request)
     
     # Check path patterns
-    if request.url.path.startswith("/static/demo_files/"):
+    if path.startswith("/static/demo_files/"):
         return await call_next(request)
     
     # Check for authentication
@@ -148,9 +166,9 @@ async def auth_middleware(request: Request, call_next):
                 # If refresh token is invalid, continue to normal authentication flow
                 pass
         
-        # Redirect GET and HEAD requests to index.html
-        if request.method in ["GET", "HEAD"]:
-            return RedirectResponse("/static/index.html")
+        # For HTML pages, send unauthenticated users to the landing page
+        if request.method in ["GET", "HEAD"] and path in AUTH_REQUIRED_HTML_PATHS:
+            return RedirectResponse("/")
         else:
             # Return a proper response instead of raising an exception
             return Response(status_code=401, headers={"WWW-Authenticate": "Bearer"}, content="Authentication required")
@@ -166,24 +184,21 @@ async def auth_middleware(request: Request, call_next):
                 # Redirect to refresh endpoint which will handle token renewal
                 return RedirectResponse("/auth/refresh", status_code=307)
             except HTTPException:
-                if request.method in ["GET", "HEAD"]:
-                    return RedirectResponse("/static/index.html")
+                if request.method in ["GET", "HEAD"] and path in AUTH_REQUIRED_HTML_PATHS:
+                    return RedirectResponse("/")
                 else:
                     return Response(status_code=401, headers={"WWW-Authenticate": "Bearer"}, content="Invalid authentication")
         else:
-            if request.method in ["GET", "HEAD"]:
-                return RedirectResponse("/static/index.html")
+            if request.method in ["GET", "HEAD"] and path in AUTH_REQUIRED_HTML_PATHS:
+                return RedirectResponse("/")
             else:
                 return Response(status_code=401, headers={"WWW-Authenticate": "Bearer"}, content="Invalid authentication")
     
     # If authenticated and trying to access root, redirect to create_conversion
-    if request.url.path == "/":
-        return RedirectResponse("/static/create_conversion.html")
+    if path == "/":
+        return RedirectResponse("/create")
         
     return await call_next(request)
-
-# Mount static files for serving HTML pages
-app.mount("/static", StaticFiles(directory="audiobook_creator/static"), name="static")
 
 # Include the auth router
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -194,11 +209,41 @@ app.include_router(account_router, prefix="/api", tags=["account"])
 # Include the pricing router
 app.include_router(pricing_router, prefix="/api", tags=["pricing"])
 
-# Root redirect - for authenticated users will be redirected to create_conversion
-# by the middleware, for unauthenticated users will be redirected to index.html
+# Root route - served without .html extension; authenticated users are redirected
+# to the create conversion flow by the auth middleware
 @app.get("/")
 async def root():
-    return RedirectResponse("/static/index.html")
+    return html_response("index.html")
+
+
+@app.get("/pricing")
+async def pricing_page():
+    return html_response("pricing.html")
+
+
+@app.get("/blog")
+async def blog_page():
+    return html_response("blog.html")
+
+
+@app.get("/create")
+async def create_conversion_page():
+    return html_response("create_conversion.html")
+
+
+@app.get("/conversion")
+async def conversion_page():
+    return html_response("conversion.html")
+
+
+@app.get("/account")
+async def account_page():
+    return html_response("account.html")
+
+
+@app.get("/payment")
+async def payment_page():
+    return html_response("payment.html")
 
 # SEO routes
 @app.get("/robots.txt", response_class=Response)

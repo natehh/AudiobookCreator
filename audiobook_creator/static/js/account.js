@@ -37,7 +37,7 @@ async function loadConversions() {
             
             return `
                 <div class="conversion-card">
-                    <a href="/static/conversion.html?id=${conv.id}" style="text-decoration: none; color: inherit;">
+                    <a href="/conversion?id=${conv.id}" style="text-decoration: none; color: inherit;">
                         <h3>${conv.title}</h3>
                         <p>Author: ${conv.author}</p>
                         <p>Voice: ${conv.voice ? getFriendlyVoice(conv.voice) : 'Unknown'}</p>
@@ -215,7 +215,7 @@ async function confirmDeleteAccount() {
             });
             
             if (response.ok) {
-                window.location.href = '/static/index.html';
+                window.location.href = '/';
             } else {
                 throw new Error('Failed to delete account');
             }
@@ -226,7 +226,7 @@ async function confirmDeleteAccount() {
 }
 
 function manageBilling() {
-    window.location.href = '/static/billing.html';
+window.location.href = '/billing';
 }
 
 function getFriendlyVoice(voiceId) {

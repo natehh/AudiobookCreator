@@ -995,7 +995,7 @@
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="faq-answer">
-                    Our transparent pricing is based on character count with no hidden fees. Premium voices start at $0.000020 per character, making it extremely affordable to convert full-length novels. For a typical 300-page book (~500,000 characters), the cost would be around $10-25 depending on the voice tier selected. Check our <a href="/static/pricing.html">detailed pricing page</a> for specific voice costs.
+                    Our transparent pricing is based on character count with no hidden fees. Premium voices start at $0.000020 per character, making it extremely affordable to convert full-length novels. For a typical 300-page book (~500,000 characters), the cost would be around $10-25 depending on the voice tier selected. Check our <a href="/pricing">detailed pricing page</a> for specific voice costs.
                 </div>
             </div>
             <div class="faq-item">
@@ -1030,7 +1030,7 @@
                 <h4>Services</h4>
                 <ul>
                     <li><a href="/">AI Audiobook Creation</a></li>
-                    <li><a href="/static/pricing.html">Voice Pricing</a></li>
+                    <li><a href="/pricing">Voice Pricing</a></li>
                     <li><a href="/">eBook to Audiobook Converter</a></li>
                     <li><a href="/">Text to Speech Technology</a></li>
                 </ul>
@@ -1047,7 +1047,7 @@
             <div class="footer-section">
                 <h4>Support</h4>
                 <ul>
-                    <li><a href="/static/blog.html">Resources & Guides</a></li>
+                    <li><a href="/blog">Resources & Guides</a></li>
                     <li><a href="/">FAQ</a></li>
                     <li><a href="/">How It Works</a></li>
                     <li><a href="/">File Formats</a></li>
@@ -1130,17 +1130,17 @@
                 
                 if (isAuthenticated) {
                     navButtons.innerHTML = `
-                        <a href="/static/create_conversion.html" class="nav-button">Create audiobook</a>
-                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
+                        <a href="/create" class="nav-button">Create audiobook</a>
+                        <a href="/pricing" class="nav-button">Pricing</a>
                     `;
                     // Only redirect if we're on the exact root path
                     if (window.location.pathname === '/') {
-                        window.location.href = '/static/account.html';
+                        window.location.href = '/account';
                     }
                 } else {
                     navButtons.innerHTML = `
-                        <a href="/static/blog.html" class="nav-button">Resources</a>
-                        <a href="/static/pricing.html" class="nav-button">Pricing</a>
+                        <a href="/blog" class="nav-button">Resources</a>
+                        <a href="/pricing" class="nav-button">Pricing</a>
                         <a href="#" class="nav-button" onclick="highlightSignup(event)">Log in</a>
                         <a href="#" class="nav-button primary-button" onclick="highlightSignup(event)">Get Started</a>
                     `;

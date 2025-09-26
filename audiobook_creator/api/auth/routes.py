@@ -110,7 +110,7 @@ def auth_callback(code: str, db=Depends(get_db)):
     store_refresh_token(refresh_token, user.id, db)
     
     # Set tokens in cookies and redirect
-    response = RedirectResponse(url="/static/create_conversion.html")
+    response = RedirectResponse(url="/create")
     return set_auth_cookies(response, access_token, refresh_token)
 
 @auth_router.get("/verify")
@@ -214,7 +214,7 @@ async def verify_magic_link_route(
         store_refresh_token(refresh_token, user.id, db)
         
         # Set tokens and redirect
-        response = RedirectResponse(url="/static/create_conversion.html")
+        response = RedirectResponse(url="/create")
         return set_auth_cookies(response, access_token, refresh_token)
         
     except Exception as e:
@@ -235,7 +235,7 @@ async def verify_magic_link_route(
             <div class="error-box">
                 <h2>Invalid or Expired Magic Link</h2>
                 <p>The login link you clicked has expired or is invalid. Please request a new login link.</p>
-                <a href="/static/index.html" class="button">Back to Login</a>
+                <a href="/" class="button">Back to Login</a>
             </div>
         </body>
         </html>
