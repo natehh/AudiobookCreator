@@ -28,6 +28,11 @@ PUBLIC_HTML_PATHS = {"/", "/pricing", "/blog"}
 AUTH_REQUIRED_HTML_PATHS = {"/create", "/conversion", "/account", "/payment"}
 HTML_PAGE_PATHS = PUBLIC_HTML_PATHS | AUTH_REQUIRED_HTML_PATHS
 
+
+def is_public_route(path: str) -> bool:
+    normalized = path.rstrip("/") or "/"
+    return normalized in PUBLIC_HTML_PATHS
+
 # Helper for serving static HTML files via clean routes
 def html_response(filename: str) -> FileResponse:
     file_path = STATIC_DIR / filename
@@ -65,7 +70,8 @@ scheduler.start()
 @app.middleware("http")
 async def global_rate_limiting(request: Request, call_next):
     # Skip rate limiting for static files and normal workflow paths
-    path = request.url.path.rstrip("/") or "/"
+    raw_path = request.url.path
+    path = raw_path.rstrip("/") or "/"
 
     if path.startswith("/static/") or \
        path.startswith("/api/payment") or \
@@ -73,7 +79,7 @@ async def global_rate_limiting(request: Request, call_next):
        path.startswith("/convert/") or \
        path.startswith("/download/") or \
        path.startswith("/auth/") or \
-       path in PUBLIC_HTML_PATHS or \
+       is_public_route(raw_path) or \
        path == "/status":
         return await call_next(request)
         
@@ -123,11 +129,12 @@ async def auth_middleware(request: Request, call_next):
         "/robots.txt",
         "/sitemap.xml",
     }
-    path = request.url.path.rstrip("/") or "/"
+    raw_path = request.url.path
+    path = raw_path.rstrip("/") or "/"
     public_paths.update(PUBLIC_HTML_PATHS)
     
     # Check exact matches first
-    if path in public_paths:
+    if path in public_paths or is_public_route(raw_path):
         return await call_next(request)
     
     # Check path patterns

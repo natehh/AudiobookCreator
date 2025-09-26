@@ -1,64 +1,62 @@
 // Navigation and authentication functions
+const PUBLIC_ROUTES = new Set(['/', '/pricing', '/blog']);
+
 async function updateNavigation() {
+    const navButtons = document.querySelector('.nav-buttons');
+    if (!navButtons) {
+        return;
+    }
+
+    showAnonymousNavPending(true);
+
     try {
         console.log("updateNavigation called");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
         const response = await fetch('/api/account', {
-            credentials: 'include'
+            credentials: 'include',
+            signal: controller.signal
         });
-        
-        let isAuthenticated = false;
-        
-        if (response.ok) {
-            try {
-                // Try to parse the response as JSON to verify we got actual user data
-                const userData = await response.json();
-                isAuthenticated = userData && userData.email; // Check if we have a user email
-                console.log("User data:", userData);
-            } catch (e) {
-                console.error("Failed to parse user data:", e);
-                isAuthenticated = false;
-            }
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            showAnonymousNavPending(false);
+            return;
         }
-        
+
+        let isAuthenticated = false;
+        try {
+            const userData = await response.json();
+            isAuthenticated = userData && userData.email;
+            console.log("User data:", userData);
+        } catch (e) {
+            console.error("Failed to parse user data:", e);
+            isAuthenticated = false;
+        }
+
         console.log("Authentication status:", isAuthenticated);
         console.log("Current path:", window.location.pathname);
-        
-        const navButtons = document.querySelector('.nav-buttons');
-        
+
         if (isAuthenticated) {
-            console.log("Setting authenticated navigation");
+            navButtons.dataset.state = 'authenticated';
             navButtons.innerHTML = `
                 <a href="/create" class="nav-button">Create audiobook</a>
                 <a href="/pricing" class="nav-button">Pricing</a>
                 <a href="/account" class="nav-button">Account</a>
                 <a href="#" class="nav-button" onclick="logout()">Logout</a>
             `;
-            
-            // If we're on the index page and authenticated, redirect to create_conversion
-            if (window.location.pathname === '/' || window.location.pathname === '/') {
-                console.log("Redirecting authenticated user from index to create_conversion");
+
+            if (window.location.pathname === '/') {
                 window.location.href = '/create';
-                return; // Stop execution to prevent further navigation changes
+                return;
             }
-        } else {
-            // For pricing page, show limited navigation without redirecting
-            if (window.location.pathname === '/pricing') {
-                console.log("Setting unauthenticated pricing page navigation");
-                navButtons.innerHTML = `
-                    <a href="/create" class="nav-button">Create audiobook</a>
-                    <a href="/pricing" class="nav-button">Pricing</a>
-                    <a href="/#signup" class="nav-button">Sign Up</a>
-                    <a href="/#login" class="nav-button">Login</a>
-                `;
-            } else if (window.location.pathname !== '/') {
-                // Only redirect to index if we're not already there
-                console.log("Redirecting to index page");
-                window.location.href = '/';
-                return; // Stop execution to prevent further navigation changes
-            }
+        } else if (!PUBLIC_ROUTES.has(window.location.pathname)) {
+            window.location.href = '/';
+            return;
         }
-        
-        // Set active class for current page
+
         const currentPath = window.location.pathname;
         const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
         if (currentButton) {
@@ -66,20 +64,42 @@ async function updateNavigation() {
         }
     } catch (error) {
         console.error('Error checking authentication:', error);
-        // Don't redirect if on pricing page
-        if (window.location.pathname === '/pricing') {
-            // Default to unauthenticated navigation on error for pricing page
-            const navButtons = document.querySelector('.nav-buttons');
-            navButtons.innerHTML = `
-                <a href="/create" class="nav-button">Create audiobook</a>
-                <a href="/pricing" class="nav-button">Pricing</a>
-                <a href="/#signup" class="nav-button">Sign Up</a>
-                <a href="/#login" class="nav-button">Login</a>
-            `;
-        } else if (window.location.pathname !== '/') {
+        if (!PUBLIC_ROUTES.has(window.location.pathname)) {
             window.location.href = '/';
+        } else {
+            showAnonymousNavPending(false);
         }
     }
+}
+
+async function updateNavigationCommon() {
+    await updateNavigation();
+}
+
+function showAnonymousNavPending(initial = false) {
+    const navButtons = document.querySelector('.nav-buttons');
+    if (!navButtons) {
+        return;
+    }
+
+    const hasHighlight = typeof highlightSignup === 'function';
+    const desiredState = initial ? 'loading' : 'anonymous';
+
+    if (navButtons.dataset.state === desiredState) {
+        return;
+    }
+
+    navButtons.dataset.state = desiredState;
+
+    const loginAnchor = hasHighlight ? '<a href="#" class="nav-button" onclick="highlightSignup(event)">Log in</a>' : '<a href="/#login" class="nav-button">Log in</a>';
+    const signupAnchor = hasHighlight ? '<a href="#" class="nav-button primary-button" onclick="highlightSignup(event)">Get Started</a>' : '<a href="/#signup" class="nav-button primary-button">Get Started</a>';
+
+    navButtons.innerHTML = `
+        <a href="/blog" class="nav-button">Resources</a>
+        <a href="/pricing" class="nav-button">Pricing</a>
+        ${loginAnchor}
+        ${signupAnchor}
+    `;
 }
 
 async function logout() {
@@ -110,4 +130,5 @@ function showMessage(text, type) {
 }
 
 // Initialize navigation when DOM is loaded
-document.addEventListener('DOMContentLoaded', updateNavigation); 
+document.addEventListener('DOMContentLoaded', updateNavigation);
+window.updateNavigationCommon = updateNavigationCommon; 

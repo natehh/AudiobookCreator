@@ -949,7 +949,7 @@
                     <p>Our AI creates your audiobook in minutes. Download or distribute it anywhere.</p>
                 </div>
             </div>
-        </div>
+        </section>
 
         <section class="use-cases">
             <h2>Perfect For Authors, Publishers & Audiobook Enthusiasts</h2>
@@ -1120,41 +1120,7 @@
         }
 
         async function updateNavigation() {
-            try {
-                const response = await fetch('/api/account', {
-                    credentials: 'include'
-                });
-                
-                const isAuthenticated = response.ok;
-                const navButtons = document.querySelector('.nav-buttons');
-                
-                if (isAuthenticated) {
-                    navButtons.innerHTML = `
-                        <a href="/create" class="nav-button">Create audiobook</a>
-                        <a href="/pricing" class="nav-button">Pricing</a>
-                    `;
-                    // Only redirect if we're on the exact root path
-                    if (window.location.pathname === '/') {
-                        window.location.href = '/account';
-                    }
-                } else {
-                    navButtons.innerHTML = `
-                        <a href="/blog" class="nav-button">Resources</a>
-                        <a href="/pricing" class="nav-button">Pricing</a>
-                        <a href="#" class="nav-button" onclick="highlightSignup(event)">Log in</a>
-                        <a href="#" class="nav-button primary-button" onclick="highlightSignup(event)">Get Started</a>
-                    `;
-                }
-                
-                // Set active class for current page
-                const currentPath = window.location.pathname;
-                const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
-                if (currentButton) {
-                    currentButton.classList.add('active');
-                }
-            } catch (error) {
-                console.error('Error checking authentication:', error);
-            }
+            updateNavigationCommon();
         }
 
         // FAQ functionality
@@ -1174,7 +1140,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            updateNavigation();
+            updateNavigationCommon();
             setupDemoPlayer('demoPlayer');
             
             // Add FAQ click handlers
