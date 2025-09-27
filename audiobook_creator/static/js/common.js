@@ -1,5 +1,10 @@
 // Navigation and authentication functions
-const PUBLIC_ROUTES = new Set(['/', '/pricing', '/blog']);
+const LANDING_INITIAL_NAV = `
+    <a href="/blog" class="nav-button">Resources</a>
+    <a href="/pricing" class="nav-button">Pricing</a>
+    <a href="#" class="nav-button" data-nav-login="true">Log in</a>
+    <a href="#" class="nav-button primary-button" data-nav-signup="true">Get Started</a>
+`;
 
 async function updateNavigation() {
     const navButtons = document.querySelector('.nav-buttons');
@@ -9,66 +14,48 @@ async function updateNavigation() {
 
     showAnonymousNavPending(true);
 
+    let isAuthenticated = false;
     try {
         console.log("updateNavigation called");
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-        const response = await fetch('/api/account', {
+        const response = await fetch('/auth/status', {
             credentials: 'include',
             signal: controller.signal
         });
-
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            showAnonymousNavPending(false);
-            return;
-        }
-
-        let isAuthenticated = false;
-        try {
-            const userData = await response.json();
-            isAuthenticated = userData && userData.email;
-            console.log("User data:", userData);
-        } catch (e) {
-            console.error("Failed to parse user data:", e);
-            isAuthenticated = false;
-        }
-
-        console.log("Authentication status:", isAuthenticated);
-        console.log("Current path:", window.location.pathname);
-
-        if (isAuthenticated) {
-            navButtons.dataset.state = 'authenticated';
-            navButtons.innerHTML = `
-                <a href="/create" class="nav-button">Create audiobook</a>
-                <a href="/pricing" class="nav-button">Pricing</a>
-                <a href="/account" class="nav-button">Account</a>
-                <a href="#" class="nav-button" onclick="logout()">Logout</a>
-            `;
-
-            if (window.location.pathname === '/') {
-                window.location.href = '/create';
-                return;
-            }
-        } else if (!PUBLIC_ROUTES.has(window.location.pathname)) {
-            window.location.href = '/';
-            return;
-        }
-
-        const currentPath = window.location.pathname;
-        const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
-        if (currentButton) {
-            currentButton.classList.add('active');
+        if (response.ok) {
+            const data = await response.json();
+            isAuthenticated = Boolean(data && data.authenticated);
+            console.log("Authentication status:", isAuthenticated);
         }
     } catch (error) {
         console.error('Error checking authentication:', error);
-        if (!PUBLIC_ROUTES.has(window.location.pathname)) {
-            window.location.href = '/';
-        } else {
-            showAnonymousNavPending(false);
+    }
+
+    if (isAuthenticated) {
+        navButtons.dataset.state = 'authenticated';
+        navButtons.innerHTML = `
+            <a href="/create" class="nav-button">Create audiobook</a>
+            <a href="/pricing" class="nav-button">Pricing</a>
+            <a href="/account" class="nav-button">Account</a>
+            <a href="#" class="nav-button" onclick="logout()">Logout</a>
+        `;
+
+        // Only redirect to create if we're on the exact root path
+        if (window.location.pathname === '/') {
+            window.location.href = '/create';
+            return;
         }
+    } else {
+        showAnonymousNavPending(false);
+    }
+
+    const currentPath = window.location.pathname;
+    const currentButton = navButtons.querySelector(`[href="${currentPath}"]`);
+    if (currentButton) {
+        currentButton.classList.add('active');
     }
 }
 
@@ -85,21 +72,31 @@ function showAnonymousNavPending(initial = false) {
     const hasHighlight = typeof highlightSignup === 'function';
     const desiredState = initial ? 'loading' : 'anonymous';
 
-    if (navButtons.dataset.state === desiredState) {
+    if (navButtons.dataset.state === desiredState && navButtons.innerHTML.trim().length > 0) {
         return;
     }
 
     navButtons.dataset.state = desiredState;
 
-    const loginAnchor = hasHighlight ? '<a href="#" class="nav-button" onclick="highlightSignup(event)">Log in</a>' : '<a href="/#login" class="nav-button">Log in</a>';
-    const signupAnchor = hasHighlight ? '<a href="#" class="nav-button primary-button" onclick="highlightSignup(event)">Get Started</a>' : '<a href="/#signup" class="nav-button primary-button">Get Started</a>';
+    navButtons.innerHTML = LANDING_INITIAL_NAV;
 
-    navButtons.innerHTML = `
-        <a href="/blog" class="nav-button">Resources</a>
-        <a href="/pricing" class="nav-button">Pricing</a>
-        ${loginAnchor}
-        ${signupAnchor}
-    `;
+    if (hasHighlight) {
+        navButtons.querySelectorAll('[data-nav-login]').forEach(anchor => {
+            anchor.addEventListener('click', event => {
+                hideAnonOverlays();
+                highlightSignup(event);
+            });
+        });
+        navButtons.querySelectorAll('[data-nav-signup]').forEach(anchor => {
+            anchor.addEventListener('click', event => {
+                hideAnonOverlays();
+                highlightSignup(event);
+            });
+        });
+    } else {
+        navButtons.querySelector('[data-nav-login]')?.setAttribute('href', '/#login');
+        navButtons.querySelector('[data-nav-signup]')?.setAttribute('href', '/#signup');
+    }
 }
 
 async function logout() {
@@ -113,6 +110,19 @@ async function logout() {
         showMessage('Error logging out', 'error');
         window.location.reload();
     }
+}
+
+function hideAnonOverlays() {
+    const navButtons = document.querySelector('.nav-buttons');
+    if (!navButtons || navButtons.dataset.state !== 'anonymous') {
+        return;
+    }
+
+    navButtons.dataset.state = 'loading';
+    navButtons.innerHTML = LANDING_INITIAL_NAV;
+
+    navButtons.querySelector('[data-nav-login]')?.removeAttribute('data-nav-login');
+    navButtons.querySelector('[data-nav-signup]')?.removeAttribute('data-nav-signup');
 }
 
 // Utility functions

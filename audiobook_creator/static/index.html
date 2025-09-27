@@ -877,12 +877,17 @@
             }
         }
     </style>
+    <script src="/static/js/common.js"></script>
     <script src="/static/js/demo-player.js"></script>
 </head>
 <body>
     <nav>
         <a href="/" class="logo"><i class="fas fa-headphones-alt"></i> Audiobook Creator</a>
         <div class="nav-buttons">
+            <a href="/blog" class="nav-button">Resources</a>
+            <a href="/pricing" class="nav-button">Pricing</a>
+            <a href="#" class="nav-button" onclick="highlightSignup(event)">Log in</a>
+            <a href="#" class="nav-button primary-button" onclick="highlightSignup(event)">Get Started</a>
         </div>
     </nav>
     
@@ -1117,10 +1122,6 @@
             
             // Scroll signup box into view if needed
             signupBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        async function updateNavigation() {
-            updateNavigationCommon();
         }
 
         // FAQ functionality

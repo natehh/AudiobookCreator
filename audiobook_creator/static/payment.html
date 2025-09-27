@@ -304,18 +304,19 @@
         // Initialize navigation
         async function updateNavigation() {
             try {
-                const response = await fetch('/api/account', {
+                const response = await fetch('/auth/status', {
                     credentials: 'include'
                 });
                 
-                const isAuthenticated = response.ok;
+                const status = response.ok ? await response.json() : { authenticated: false };
+                const isAuthenticated = Boolean(status.authenticated);
                 const navButtons = document.querySelector('.nav-buttons');
                 
                 if (isAuthenticated) {
                     navButtons.innerHTML = `
-                        <a href="/create" class="nav-button">Create audiobook</a>
-                        <a href="/pricing" class="nav-button">Pricing</a>
-                        <a href="/account" class="nav-button">Account</a>
+                    <a href="/create" class="nav-button">Create audiobook</a>
+                    <a href="/pricing" class="nav-button">Pricing</a>
+                    <a href="/account" class="nav-button">Account</a>
                         <a href="#" class="nav-button" onclick="logout()">Logout</a>
                     `;
                 } else {

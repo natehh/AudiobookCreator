@@ -1,9 +1,25 @@
 async function loadAccountInfo() {
     try {
+        const statusResponse = await fetch('/auth/status', {
+            credentials: 'include'
+        });
+
+        if (!statusResponse.ok) {
+            window.location.href = '/';
+            return;
+        }
+
+        const status = await statusResponse.json();
+        if (!status || !status.authenticated) {
+            window.location.href = '/';
+            return;
+        }
+
         const response = await fetch('/api/account', {
             credentials: 'include'
         });
         const data = await response.json();
+        window.__ACCOUNT_INFO__ = data;
         
         document.getElementById('email').value = data.email;
         document.getElementById('name').value = data.name || '';
@@ -209,10 +225,10 @@ async function removePaymentMethod(paymentMethodId) {
 async function confirmDeleteAccount() {
     if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
         try {
-            const response = await fetch('/api/account', {
-                method: 'DELETE',
-                credentials: 'include'
-            });
+        const response = await fetch('/api/account', {
+            method: 'DELETE',
+            credentials: 'include'
+        });
             
             if (response.ok) {
                 window.location.href = '/';
@@ -232,6 +248,34 @@ window.location.href = '/billing';
 function getFriendlyVoice(voiceId) {
     const match = /-(\w+)Neural$/.exec(voiceId);
     return match ? match[1] : voiceId;
+}
+
+async function updateNavigation() {
+    try {
+        const statusResponse = await fetch('/auth/status', {
+            credentials: 'include'
+        });
+        
+        const navButtons = document.querySelector('.nav-buttons');
+        
+        if (statusResponse.ok) {
+            const status = await statusResponse.json();
+            if (status && status.authenticated) {
+                navButtons.innerHTML = `
+                    <a href="/create" class="nav-button">Create audiobook</a>
+                    <a href="/pricing" class="nav-button">Pricing</a>
+                    <a href="/account" class="nav-button">Account</a>
+                    <a href="#" class="nav-button" onclick="logout()">Logout</a>
+                `;
+                return;
+            }
+        }
+        
+        window.location.href = '/';
+    } catch (error) {
+        console.error('Error checking authentication:', error);
+        window.location.href = '/';
+    }
 }
 
 // Initialize when DOM is loaded

@@ -118,6 +118,12 @@ async def verify_auth(token: str = Depends(JWTBearer())):
     """Verify authentication status."""
     return JSONResponse({"authenticated": True})
 
+@auth_router.get("/status")
+async def auth_status(request: Request):
+    access_token = request.cookies.get("access_token")
+    is_authenticated = bool(access_token and access_token.startswith("Bearer "))
+    return JSONResponse({"authenticated": is_authenticated})
+
 @auth_router.post("/refresh")
 async def refresh_token(
     request: Request,
